@@ -1,0 +1,12 @@
+# 1. Clonar el repositorio
+git clone https://github.com/nelsononkos78/apsia.git
+
+# 2. Instalar dependencias
+cd apsia/backend
+npm install
+
+# 3. Configurar PostgreSQL en .env
+DATABASE_URL=postgresql://username:password@localhost:5432/appointment_central
+
+# 4. Ejecutar migraciones
+npm run migrate:postgres
