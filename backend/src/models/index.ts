@@ -1,0 +1,7 @@
+export * from './patient.model';
+export * from './staff.model';
+export * from './appointment.model';
+export * from './queue.model';
+export * from './chemoChair.model';
+export * from './recoveryRoom.model';
+export * from './doctor.model';
