@@ -37,6 +37,16 @@ const router = createRouter({
             path: '/monitoring',
             name: 'monitoring',
             component: () => import('../views/MonitoringDashboard.vue')
+        },
+        {
+            path: '/internal-flow',
+            name: 'internal-flow',
+            component: () => import('../views/InternalFlowDashboard.vue')
+        },
+        {
+            path: '/doctor/dashboard',
+            name: 'doctor-dashboard',
+            component: () => import('../views/DoctorDashboard.vue')
         }
     ]
 })

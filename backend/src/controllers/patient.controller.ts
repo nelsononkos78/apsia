@@ -4,10 +4,12 @@ import { Patient } from '../models/patient.model';
 export const getPatients = async (req: Request, res: Response) => {
     try {
         const { documentId } = req.query;
-        const whereClause = documentId ? { documentId: documentId as string } : {};
+        // Map documentId query param to documentNumber model field
+        const whereClause = documentId ? { documentNumber: documentId as string } : {};
         const patients = await Patient.findAll({ where: whereClause });
         res.json(patients);
     } catch (error) {
+        console.error('Error fetching patients:', error);
         res.status(500).json({ error: 'Failed to fetch patients' });
     }
 };

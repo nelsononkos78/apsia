@@ -3,6 +3,6 @@ import { getTvState } from '../controllers/tv.controller';
 
 const router = Router();
 
-router.get('/', getTvState);
+router.get('/state', getTvState);
 
 export default router;

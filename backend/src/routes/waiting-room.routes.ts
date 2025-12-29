@@ -17,10 +17,10 @@ router.get('/statistics', waitingRoomController.getStatistics.bind(waitingRoomCo
 router.post('/', waitingRoomController.addPatient.bind(waitingRoomController));
 
 // Llamar a un paciente
-router.put('/:id/call', waitingRoomController.callPatient.bind(waitingRoomController));
+router.post('/:id/call', waitingRoomController.callPatient.bind(waitingRoomController));
 
 // Marcar como atendido
-router.put('/:id/attended', waitingRoomController.markAsAttended.bind(waitingRoomController));
+router.post('/:id/attend', waitingRoomController.markAsAttended.bind(waitingRoomController));
 
 // Remover de la sala de espera
 router.delete('/:id', waitingRoomController.removePatient.bind(waitingRoomController));

@@ -3,8 +3,16 @@ import { Table, Column, Model, DataType, CreatedAt, UpdatedAt } from 'sequelize-
 export enum StaffRole {
     ADMIN = 'ADMIN',
     DOCTOR = 'DOCTOR',
-    NURSE = 'NURSE',
-    RECEPTIONIST = 'RECEPTIONIST'
+    NURSE_CHEMO = 'NURSE_CHEMO',
+    NURSE_PROCEDURE = 'NURSE_PROCEDURE',
+    NURSE_ULTRASOUND = 'NURSE_ULTRASOUND',
+    NURSE_GENERAL = 'NURSE_GENERAL',
+    RECEPTIONIST = 'RECEPTIONIST',
+    LAB_ONCO = 'LAB_ONCO',
+    LAB_GENERAL = 'LAB_GENERAL',
+    PHARMACY = 'PHARMACY',
+    QUOTE_MANAGER = 'QUOTE_MANAGER',
+    COMMERCIAL = 'COMMERCIAL'
 }
 
 @Table({ tableName: 'staff' })

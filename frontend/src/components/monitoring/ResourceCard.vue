@@ -1,10 +1,16 @@
 <template>
-    <div :class="['resource-card-minimal', `status-${resource.status.toLowerCase()}`]">
+    <div :class="['resource-card-minimal', displayStatusClass, { 'inactive-doctor': isCardDisabled }]">
         <div class="card-content">
             <div class="icon-container">
                 <div class="resource-number">{{ resourceNumber }}</div>
             </div>
-            <div class="action-buttons">
+            <div class="details-container">
+                <div class="detail-text">
+                    <div class="primary-text">{{ primaryText }}</div>
+                    <div class="secondary-text" v-if="secondaryText">{{ secondaryText }}</div>
+                </div>
+            </div>
+            <div class="action-buttons" v-if="isDoctorActiveToday">
                 <button 
                     v-if="resource.status === 'DISPONIBLE'" 
                     @click="markAsOccupied"
@@ -41,7 +47,11 @@ import { resourceService } from '../../services/resource.service';
 import { useMonitoringStore } from '../../stores/monitoring.store';
 
 const props = defineProps<{
-    resource: Resource
+    resource: Resource;
+    doctorName?: string;
+    patientName?: string;
+    treatmentInfo?: string;
+    waitingCount?: number;
 }>();
 
 const monitoringStore = useMonitoringStore();
@@ -72,12 +82,14 @@ const reasonText = computed(() => {
 
 async function markAsOccupied() {
     try {
-        const updated = await resourceService.updateResourceStatus(props.resource.id, {
-            status: 'OCUPADO'
-        });
+        const updated = await resourceService.callNextPatient(props.resource.id);
         monitoringStore.updateResource(updated);
-    } catch (error) {
-        console.error('Error updating resource:', error);
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            alert(error.response.data.message); // Or use a toast notification
+        } else {
+            console.error('Error calling next patient:', error);
+        }
     }
 }
 
@@ -90,26 +102,68 @@ async function markAsAvailable() {
     }
 }
 
-async function toggleDisable() {
-    try {
-        const newStatus = props.resource.status === 'INHABILITADO' ? 'DISPONIBLE' : 'INHABILITADO';
-        const reason = newStatus === 'INHABILITADO' ? 'MANTENIMIENTO' : undefined;
-        
-        const updated = await resourceService.updateResourceStatus(props.resource.id, {
-            status: newStatus,
-            reason
-        });
-        monitoringStore.updateResource(updated);
-    } catch (error) {
-        console.error('Error toggling resource status:', error);
+
+
+const isDoctorActiveToday = computed(() => {
+    if (props.resource.type !== 'CONSULTORIO') return true; // Only applies to Consultorios
+    if (!props.resource.doctor) return true; // If no doctor, assume active (or handle as 'Sin asignar')
+
+    if (props.resource.doctor.status !== 'activo') return false;
+
+    const today = new Date().getDay(); // 0 = Sunday, ...
+    // Check if doctor has schedule for today
+    const schedule = props.resource.doctor.schedules?.find(s => s.dayOfWeek === today);
+    return !!schedule && schedule.isActive;
+});
+
+const displayStatus = computed(() => {
+    if (!isDoctorActiveToday.value) return 'INHABILITADO';
+    return props.resource.status;
+});
+
+const isCardDisabled = computed(() => {
+    if (!isDoctorActiveToday.value) return true;
+    
+    // If it's a consulting room and it's occupied, we disable it for monitoring
+    // so the doctor is the one who releases it.
+    if (props.resource.type === 'CONSULTORIO' && props.resource.status === 'OCUPADO') {
+        return true;
     }
-}
+    
+    return false;
+});
+
+const displayStatusClass = computed(() => {
+    return `status-${displayStatus.value.toLowerCase()}`;
+});
+
+const primaryText = computed(() => {
+    if (props.resource.type === 'CONSULTORIO') {
+        return props.doctorName || props.resource.doctor?.name || 'Sin asignar';
+    }
+    return props.patientName || 'Paciente';
+});
+
+const secondaryText = computed(() => {
+    if (props.resource.type === 'CONSULTORIO') {
+        if (props.resource.status === 'OCUPADO') {
+            return props.patientName || (props.resource.currentPatient ? `${props.resource.currentPatient.firstName} ${props.resource.currentPatient.lastName}` : '');
+        }
+        // When DISPONIBLE or others
+        if (props.waitingCount !== undefined && props.waitingCount > 0) {
+            return `En espera: ${props.waitingCount}`;
+        }
+        return 'Sin pacientes';
+    }
+    return props.treatmentInfo || 'Tratamiento';
+});
+
 </script>
 
 <style scoped>
 .resource-card-minimal {
-    width: 150px;
-    height: 70px;
+    width: 220px;
+    height: 80px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 12px;
@@ -154,6 +208,7 @@ async function toggleDisable() {
     align-items: center;
     gap: 0;
     height: 100%;
+    position: relative; /* For absolute positioning of actions */
 }
 
 .icon-container {
@@ -200,26 +255,78 @@ async function toggleDisable() {
     color: #757575;
 }
 
-.action-buttons {
+.details-container {
+    flex: 1;
     display: flex;
-    gap: 3px;
-    margin-left: auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 8px;
+    overflow: hidden;
+}
+
+.detail-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.primary-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #37474f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.secondary-text {
+    font-size: 12px;
+    color: #78909c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.action-buttons {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.98); /* Overlay background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.resource-card-minimal:hover .action-buttons {
+    opacity: 1;
+}
+
+.inactive-doctor {
+    opacity: 0.7;
+    pointer-events: none;
+    filter: grayscale(100%);
 }
 
 .action-icon-btn {
-    width: 26px;
-    height: 26px;
+    width: 32px; /* Slightly larger for better clickability */
+    height: 32px;
     border: none;
     background: white;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     color: #546e7a;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    font-size: 11px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
 }
 
 .action-icon-btn:hover {
@@ -256,9 +363,9 @@ async function toggleDisable() {
     }
     
     .action-icon-btn {
-        width: 24px;
-        height: 24px;
-        font-size: 10px;
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
     }
 }
 
@@ -277,13 +384,9 @@ async function toggleDisable() {
     }
     
     .action-icon-btn {
-        width: 22px;
-        height: 22px;
-        font-size: 9px;
-    }
-    
-    .action-buttons {
-        gap: 2px;
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
     }
 }
 </style>

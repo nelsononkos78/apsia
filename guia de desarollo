@@ -1,0 +1,1564 @@
+Sistema de Gestión de Citas Onkos 
+
+Requerimientos Funcionales v1.0 
+
+Forma 
+
+1. Objetivo del Sistema 
+
+Ordenar la agenda de citas (consulta, laboratorio, quimioterapia, procedimientos, ecografías, seguimiento, observación clínica y servicios generales) para reducir reprocesos, tiempos de espera y pérdida de información, mejorando el nivel de servicio al paciente oncológico y no oncológico. 
+
+Forma 
+
+2. Servicios Incluidos en la App de Citas 
+
+2.1 Listado de 9 Servicios 
+
+La App de Gestión de Citas contempla los siguientes 8 tipos de servicio: 
+
+Consulta nueva – Paciente nuevo por especialidad 
+
+Consulta de seguimiento – Consultas recurrentes de pacientes existentes 
+
+Sesión de quimioterapias – Administración de esquemas quimioterapéuticos 
+
+Procedimientos Oncológicos |– Intraperitoneal, biopsia, paracentesis, otros 
+
+Examen de laboratorio oncológico – Análisis para pacientes oncológicos 
+
+Ecografías Oncológicas – Estudios de imagen oncológica 
+
+Recuperación ambulatoria – Reposo corto, monitoreo, hidratación, analgesia post procedimiento 
+
+Emergencias Oncológicas- Emergencia ante urgencias oncológicas. 
+
+Servicios de Salud General (SSG) – Vitaminas, inyecciones, hidrataciones, ecografías y laboratorio general para pacientes no oncológicos. 
+
+ 
+
+2.2 Detalle por Tipo de Servicio 
+
+Consulta Nueva 
+
+Especialidades: Registradas en Excel de configuración 
+
+Lista de médicos: Registrada en Excel 
+
+Horarios: Registrada en Excel  
+
+Código paciente: ONC-DNI (ej. ONC-76778626) 
+
+Duración consulta: 40–45 minutos (según médico) 
+
+Consulta de Seguimiento 
+
+Especialidades y médicos: Mismos que consulta nueva 
+
+Código paciente: ONC-DNI 
+
+Duración consulta: 30 minutos (según médico) 
+
+Sesión de Quimioterapias 
+
+Indicación: Posterior a orden médica en consulta 
+
+Horario de ingresos: Lunes a viernes de 8:00 a 14:00 
+
+Duración: Variable según esquema de quimioterapia 
+
+Código paciente: ONC-DNI 
+
+Requisito: Debe estar en estado "Sesión programada" antes de aparecer en la app 
+
+Procedimientos 
+
+Horario: Lunes, miércoles y viernes de 16:00 a 18:00 
+
+Capacidad: 2 camas 
+
+Duración promedio: 35–40 minutos por paciente 
+
+Código paciente: ONC-DNI 
+
+Exámenes de Laboratorio Oncológico 
+
+Horario de laboratorio: Lunes a sábado de 8:00 a 17:00 
+
+Horario de toma de muestra: Lunes a sábado de 8:00 a 11:00 
+
+Total de exámenes: ~136 con requisitos específicos (ayuno, horario restringido, etc.) en Excel  
+
+Entrega de resultados en físico: con comunicación con paciente, laboratorio. Laboratorio lo baja y entrega a recepción. 
+
+Código paciente: ONC-DNI 
+
+Ecografías Oncológico 
+
+Horario: Lunes, miércoles y viernes de 16:00 a 18:00 
+
+Capacidad: 1 cama 
+
+Duración promedio: 15 minutos 
+
+Código paciente: ONC-DNI 
+
+Tipos comunes: Abdomen, mama, tiroides, otros 
+
+Recuperación Ambulatoria 
+
+Capacidad: 4 camas 
+
+Duración: Sin tiempo estándar; requiere bloquear/desbloquear cama como en quimioterapia 
+
+Función: Reposo corto, monitoreo, hidratación, analgesia, cuidados complementarios post procedimiento. AKA ---HOSPITALIZACION 
+
+Código paciente: ONC-DNI 
+
+Nota legal: Se denominará "Recuperación Ambulatoria" por razones legales 
+
+Emergencias oncológicas 
+
+Servicios: Pasa por control 
+
+Horario:  
+
+Infraestructura: 2 camas 
+
+Código paciente: ONC-DNI o ONC-CE o ONC-PASAPORTE. 
+
+Tiene prioridad: Si es que en la cola ponen emergencias oncológicas sube inmediatamente como prioridad para atención en counter, consulta, quimioterapia, y hospitalización en la lista de espera.  
+
+ 
+
+Servicios de Salud General (SSG) 
+
+Servicios: Vitaminas, inyecciones, hidrataciones, exámenes de laboratorio para pacientes externos 
+
+Infraestructura en área general: Comparten 9 sillas con quimioterapia; se recomienda reservar 1–2 sillas por turno 
+
+Horario: Mismo que quimioterapia (8:00 a 16:00) 
+
+Laboratorio: También atiende pacientes externos con horario de laboratorio oncológico. Mismo horario que laboratorio oncológico.  
+
+Código paciente: SSG-DNI (ej. SSG-76778626) – nomenclatura diferente a oncológico 
+
+Acceso a historia clínica: NO se registra con ONC-DNI sino con SSG-DNI 
+
+2.3 Servicios NO Incluidos 
+
+Farmacia – Apoyo a servicios oncológicos y no oncológicos (Onkos Salud) 
+
+Cuidados Paliativos – Seguimiento en domicilio; se evaluará migración futura al sistema de citas 
+
+Forma 
+
+3. Canales de Reserva 
+
+3.1 Página Web "Agenda tu cita o visual de cita" 
+
+Formulario: Conectado directamente a la App de Gestión de Citas (no pasa por bot) 
+
+Campos solicitados: Tipo de servicio, información específica según servicio, nombres y apellidos, teléfono 
+
+Objetivo: Captura automática en la app sin intermediarios 
+
+3.2 WhatsApp Bot Onkos (24/7) 
+
+Número oficial: +51 933 598 495 
+
+Funcionalidades: Reservas, reprogramaciones y cancelaciones para todos los servicios 
+
+Preguntas: Equivalentes al formulario web, variadas según tipo de servicio 
+
+Integración: Crea la cita en la App mediante n8n (API) 
+
+Usuario responsable: BOT Onkos – Asistente Virtual 
+
+3.3 Recepción/Counter/Atencion 
+
+Número oficial: +51 919475320 
+
+Funcionalidades: Reservas, reprogramaciones y cancelaciones para todos los servicios 
+
+Preguntas: Equivalentes al formulario web, variadas según tipo de servicio 
+
+ 
+
+Forma 
+
+3. Información que migra entre aréas internas. 
+
+Nombre del Paciente: Ejm: Ana M. 
+
+Código asignado: Si es paciente no oncológico aparece migra el SSG-NUMERO DE DOCUMENTO si es paciente oncológica migra así: 
+
+HC: ONC-76778626 HC asociada: 7223 
+
+Fecha y Hora de cita o uso de Recurso 
+
+Número de teléfono 
+
+Motivo de la consulta o uso independientemente si es oncológico o no. 
+
+Ese motivo de la consulta será llenado por recepción en un máximo de 5 palabras cuando se toma los datos si es paciente no oncológico si es oncológico si pasa por el filtro del doctor de consulta que especifica en menos de 5 palabras el diagnóstico de enfermedad.  
+
+4. Flujo de Reserva Y visualización Online (antes de la atención) 
+
+4.1 Pasos de Reserva 
+
+Paso 1: Usuario hace clic en "Reservar cita" 
+
+Paso 2: Selecciona el tipo de servicio 
+
+Para reserva online se ofrecen 5 servicios: consulta nueva, consulta seguimiento, , procedimientos, laboratorio onco, ecografías onco. 
+
+Para visualización online de cita programada en base de datos 1: quimioterapias 
+
+Se excluyen: recuperación ambulatoria, urgencias oncológicas y SSG (se manejan internamente) ósea recepción tiene habilitado esos módulos.  
+
+Paso 3: Completa datos generales del paciente o apoderado 
+
+Nombre y apellidos 
+
+Número de teléfono 
+
+Número de documento 
+
+Fecha y hora de cita reservada 
+
+Motivo de consulta: 5 palabras máximo ejm: descarte cancer, cancer de tiroides, ecografía por hígado graso. etc 
+
+Campos adicionales según tipo de servicio 
+
+Paso 4: Genera número de confirmación 
+
+4.2 Datos Comunes para Cualquier Reserva 
+
+Para cualquier tipo de cita reservada se solicitan: 
+
+Nombre y apellidos del paciente o apoderado 
+
+Número de teléfono (dato clave para comunicaciones) 
+
+Número de documento (DNI u otro) 
+
+Fecha y hora de la cita reservada 
+
+Acceso a información: 
+
+Acceso completo: Atención al cliente y Cotizaciones (todos los datos) 
+
+Acceso parcial: Todas las áreas operativas (tipo de servicio, nombre abreviado, código HC/SSG, teléfono, fecha y hora, motivo de consulta si es externo y si es oncológico  su diagnóstico) 
+
+4.3 Campos Específicos por Tipo de Servicio 
+
+Consulta Nueva 
+
+Tipo de servicio: Consulta nueva 
+
+Especialidad (selector) 
+
+Médico (selector, filtrado por especialidad) 
+
+Nombre y apellidos del paciente/apoderado 
+
+Teléfono 
+
+Numero Documento del paciente 
+
+Fecha y hora seleccionada para médicos fijos (no consideramos los médicos que trabajan por consulta sin horario fijo) 
+
+Número de confirmación de reserva 
+
+Consulta de Seguimiento 
+
+Tipo de servicio: Consulta seguimiento 
+
+Médico (selector) del médico que esta viendo su caso 
+
+Nombre y apellidos 
+
+Teléfono 
+
+Número de documento 
+
+Fecha y hora seleccionada para médicos fijos (no consideramos los médicos que trabajan por consulta sin horario fijo) 
+
+Número de confirmación de reserva 
+
+Sesión de Quimioterapias 
+
+Le aparece en Agenda tu cita/ ver mis citas: Solo aparecen las sesiones programadas.  
+
+Se le pide esta información en el panel de búsqueda.  
+
+Tipo de documento (DNI, CE, Pasaporte). 
+
+Número de documento. 
+
+Teléfono celular. 
+
+Si existe ONC‑DNI I asociado a ese documento, se usa ese código y se muestran las citas futuras (quimio en “Sesión programada”) 
+
+Si no tiene ONC- Numero o sesión programda decirle que contacte al numero de Olga. 
+
+Si encuentra coincidencia muestra los siguientes campos 
+
+Campos visibles por sesión 
+
+Tipo de servicio: “Sesión de quimioterapia”. 
+
+Fecha programada y Hora (ej. 10:00–14:00). 
+
+Número de sesión o ciclo (opcional: “Sesión 3 de 8”). 
+
+Nombre abreviado del paciente (solo para verificación) y código ONC DNI. 
+
+Numero de confirmación de cita programada. 
+
+Pedirle que llegue entre 20 minutos antes para que pueda realizar el pago.  
+
+ 
+
+(Nota: La sesión solo aparece como opción después de completar el flujo interno de programación de fecha) lo ves en el punto 5: Flujo interno de Quimioterapia.  
+
+Forma 
+
+Procedimientos Oncológicos  
+
+Le aparece en Agenda tu cita/ ver mis citas: Solo aparecen las sesiones programadas.  
+
+Se le pide esta información en el panel de búsqueda.  
+
+Tipo de documento (DNI, CE, Pasaporte). 
+
+Número de documento. 
+
+Teléfono celular. 
+
+Si existe ONC‑DNI I asociado a ese documento, se usa ese código y se muestran las citas futuras (quimio en “Sesión programada”) 
+
+Si no tiene ONC- Numero o sesión programda decirle que contacte al numero de Olga. 
+
+Si encuentra coincidencia muestra los siguientes campos 
+
+Campos visibles por sesión 
+
+Tipo de servicio: Procedimiento Oncológico 
+
+Detalle Breve del Procedimiento: Tipo de Procedimiento ejm: Biopsia Mama 
+
+Fecha programada y Hora L-M-V entre el horario pactado 
+
+Nombre abreviado del paciente (solo para verificación) y código ONC DNI. 
+
+Numero de confirmación de cita programada. 
+
+Pedirle que llegue entre 20 minutos antes para que pueda realizar el pago.  
+
+(Nota: La sesión solo aparece como opción después de completar el flujo interno de programación de fecha) lo ves en el punto 5: Flujo interno de Quimioterapia.  
+
+Forma 
+
+Examen de laboratorio oncológico 
+
+ 
+
+Ecografías Oncológicas  
+
+Recuperación ambulatoria  
+
+Servicios de Salud General (SSG)  
+
+Urgencias Oncológicas 
+
+ 
+
+ 
+
+5. Flujo Interno de Quimioterapia (antes de aparecer en app de citas) 
+
+La sesión de quimioterapia sigue un proceso interno que culmina cuando el estado es "Sesión programada". Solo en ese momento aparece como opción de reserva en la app. 
+
+5.1 Estados y Responsables del Flujo 
+
+Estado 
+
+Quién lo cambia 
+
+Módulo 
+
+Descripción 
+
+Receta registrada 
+
+Counter (Recepción) 
+
+Recepción 
+
+Se ingresa la receta física del médico 
+
+Pendiente de cotización 
+
+Sistema automático 
+
+Recepción 
+
+Se genera automáticamente tras registrar receta 
+
+Cotización lista 
+
+Farmacia o administración 
+
+Cotizaciones 
+
+Farmacia valida stock de medicamentos 
+
+Cotización con stock 
+
+Farmacia 
+
+Cotizaciones 
+
+Farmacia confirma disponibilidad 
+
+Cotización enviada 
+
+Cotizaciones / Farmacia 
+
+Cotizaciones 
+
+Se envía cotización al paciente 
+
+Cotización aprobada 
+
+Administrador o Counter 
+
+Cotizaciones 
+
+Paciente autoriza el tratamiento 
+
+Sesión programada 
+
+Counter (Recepción) 
+
+Cotizaciones 
+
+Se define fecha, hora y silla final 
+
+ 
+
+Table 1: Estados del flujo de quimioterapia 
+
+Momento de aparición en la app: Solo cuando estado = "Sesión programada" para visualización de fecha cita.  
+
+5.2 Pasos Detallados del Flujo Interno de Quimio 
+
+Paso 1. Médico Emite Orden (Consulta) 
+
+Acción: Emite receta física de quimioterapia 
+
+Indica: Fecha propuesta para próxima sesión 
+
+Indica: Fecha de próxima consulta (consulta de seguimiento) 
+
+Visualización: Puede ver disponibilidad general de quimio, pero NO programa directamente (solo propone fecha) 
+
+Digitalización: Nada se digitaliza en este punto; toda la información es física 
+
+Paso 2. Recepción Registra Receta 
+
+Quién: Counter de recepción 
+
+Qué ingresa: 
+
+DNI del paciente 
+
+Código ONC (antiguo o nuevo) 
+
+Médico tratante 
+
+Fecha sugerida por el médico 
+
+Estado inicial: "Receta registrada" 
+
+Estado de solicitud: "Pendiente de cotización" (automático) 
+
+Paso 3. Farmacia Valida Stock 
+
+Quién: Farmacia o administración 
+
+Qué valida: Disponibilidad de medicamentos y stock 
+
+Estado: "Cotización con stock" 
+
+Paso 4. Cotización Enviada 
+
+Quién: Módulo de cotizaciones / Farmacia 
+
+Qué hace: Envía cotización al paciente para aprobación 
+
+Estado: "Cotización enviada" 
+
+Paso 5. Paciente Aprueba 
+
+Quién: Paciente (Counter registra aprobación) 
+
+Qué hace: Confirma autorización de tratamiento 
+
+Estado: "Cotización aprobada" 
+
+Paso 6. Programación Final 
+
+Quién: Counter de recepción 
+
+Qué programa: Fecha definitiva, hora y número de silla 
+
+Estado: "Sesión programada" 
+
+A partir de aquí, la sesión de quimioterapia es visible en la app de gestión de citas 
+
+5.3 Campos Clave del Proceso Quimioterapia 
+
+Campo 
+
+Descripción 
+
+Quién lo ingresa 
+
+Momento del flujo 
+
+Documento del paciente 
+
+DNI u otro documento 
+
+Counter 
+
+Registro inicial de receta 
+
+Código del paciente 
+
+ONC-DNI, código antiguo, o SSG-DNI 
+
+Sistema (automático) 
+
+Automático 
+
+Nombre del paciente (abreviado) 
+
+Ej. María L. 
+
+Sistema (automático) 
+
+Automático 
+
+Médico tratante 
+
+Médico que indicó la quimioterapia 
+
+Counter 
+
+Registro inicial de numero de quimioterapia. 
+
+Fecha propuesta por el médico 
+
+Fecha sugerida en la receta 
+
+Counter 
+
+Registro inicial de receta 
+
+Estado inicial 
+
+Receta registrada 
+
+Sistema (automático) 
+
+Automático 
+
+Estado de solicitud 
+
+Pendiente de cotización 
+
+Sistema (automático) 
+
+Automático al registrar receta 
+
+Validación de stock 
+
+Confirma disponibilidad de medicamentos 
+
+Farmacia 
+
+Fase de cotización 
+
+Cotización con stock 
+
+Indica que farmacia validó medicamentos 
+
+Farmacia 
+
+Fase de cotización 
+
+Cotización enviada 
+
+Cotización entregada al paciente 
+
+Cotizaciones / Farmacia 
+
+Antes de aprobación 
+
+Cotización aprobada 
+
+Paciente autoriza el tratamiento 
+
+Counter o Cotizaciones 
+
+Antes de programación 
+
+Permiso para programar 
+
+Se libera después de cotización aprobada 
+
+Sistema (automático) 
+
+Automático 
+
+Fecha programada 
+
+Día final y hora de la sesión 
+
+Counter 
+
+Programación final 
+
+Número de silla 
+
+Silla asignada en sala de quimioterapia 
+
+Counter 
+
+Programación final 
+
+ 
+
+Forma 
+
+6. Flujo interno de Procedimientos 
+
+La sesión de procedimientos sigue un proceso interno que culmina cuando el estado es "Sesión programada". Solo en ese momento aparece como opción de reserva en la app. 
+
+6.1 Estados y Responsables del Flujo 
+
+ 
+
+Estado 
+
+Quién lo cambia 
+
+Módulo 
+
+Descripción 
+
+Orden registrada 
+
+Counter (Recepción) 
+
+Recepción 
+
+Se ingresa en sistema la orden física del médico para un procedimiento. Osea se pone el procedimiento a realizarse en máximo 5 palabras y Nombre de Doctor que emitió orden: aparece en lista. 
+
+Pendiente de cotización 
+
+Sistema automático 
+
+Recepción 
+
+Se genera automáticamente tras registrar la orden, si el proc. requiere cotizar. 
+
+Cotización lista 
+
+Cotizaciones / Farmacia 
+
+Cotizaciones 
+
+Se arma la cotización con insumos y honorarios del procedimiento. 
+
+Cotización enviada 
+
+Cotizaciones 
+
+Cotizaciones 
+
+Se envía la cotización al paciente para revisión. 
+
+Cotización aprobada 
+
+Counter o Cotizaciones 
+
+Cotizaciones 
+
+Se registra que el paciente acepta el costo; se libera permiso para programar. 
+
+Procedimiento programado 
+
+Counter (Recepción) 
+
+Procedimientos 
+
+Se define fecha L–M–V, hora dentro de 16:00–18:00 y cama (1 o 2). 
+
+5.2 Pasos Detallados del Flujo Interno de Procedimiento 
+
+Pasos detallados del flujo interno de procedimientos 
+
+Médico emite orden en consulta 
+
+Acción: escribe orden de procedimiento (tipo, lateralidad si aplica, urgencia). 
+
+Puede sugerir fecha, pero no programa; la info sigue siendo física.​ 
+
+Recepción registra orden 
+
+Ingresa DNI, ONCDNI, médico tratante, tipo de procedimiento y fecha sugerida. 
+
+Estado: “Orden registrada”; el sistema marca “Pendiente de cotización” cuando corresponda.​ 
+
+Cotizaciones / Farmacia prepara cotización 
+
+Valida insumos, tiempos de sala y honorarios. 
+
+Estado: “Cotización lista” y luego “Cotización enviada” al paciente.​ 
+
+Paciente aprueba cotización 
+
+Counter o Cotizaciones registran la aprobación (voucher, mensaje, etc.). 
+
+Estado: “Cotización aprobada”; el sistema habilita la programación.​ 
+
+Programación final del procedimiento 
+
+Counter abre agenda de sala de procedimientos (L–M–V 16:00–18:00, 2 camas, 35–40 min).​ 
+
+Asigna fecha definitiva, hora y cama 1 o 2. 
+
+Estado: “Procedimiento programado” → desde aquí la cita aparece en la web del paciente 
+
+6. Flujo interno de Laboratorio oncologico opción a: orden digital desde medico 
+
+ 
+
+ 
+
+ 
+
+6. Flujo de Llegada Presencial y Gestión de Colas 
+
+6.1 Acceso a Punto de Atención  
+
+Paso 1: Paciente se acerca al espacio de gestión de colas 
+
+Paso 2: Selecciona el tipo de servicio a realizar presencialmente 
+
+Consulta nueva 
+
+Consulta seguimiento 
+
+Sesión de quimioterapias 
+
+Procedimientos (oncológico) 
+
+Examen de laboratorio oncológico 
+
+Ecografías Oncológicas 
+
+Recuperación ambulatoria 
+
+Urgencias Oncológicas 
+
+Servicios de Salud General (SSG) 
+
+Paso 3: El sistema solicita número de documento 
+
+Sirve para vincular con historia clínica existente 
+
+Si no existe, genera nueva ficha 
+
+Paso 4: El sistema genera ticket automático 
+
+Usa prefijo según tipo de servicio 
+
+Incluye nombre abreviado del paciente 
+
+Asigna número de espera en base al día 
+
+Paso 5: Imprime ticket con código y número de espera (si se tiene que imprimir la tele no llega a todos los asientos) 
+
+Formato: [PREFIJO]-[Nombre Inicial Apellido Inicial.] 
+
+Pantalla táctil con opción de impresora de ticket 
+
+(Pendiente: Definir formato final con impresora de tablet) 
+
+Paso 6: Pantalla visible muestra turno actual 
+
+Llamado visible de código y status (turno actual o espera) 
+
+Actualización en tiempo real 
+
+Paso 7: Panel de estado por áreas 
+
+Muestra áreas activas con pacientes 
+
+Nombre abreviado del paciente 
+
+Estado de atención (en atención / pendiente) 
+
+6.2 Prefijos de Ticket por Servicio 
+
+Servicio 
+
+Prefijo 
+
+Ejemplo 
+
+Justificación 
+
+Consulta nueva 
+
+CN 
+
+CN–Ana M. 
+
+C = Consulta 
+
+Consulta seguimiento 
+
+CS 
+
+CS–Ana M. 
+
+Mismo circuito 
+
+Sesión de quimioterapias 
+
+Q 
+
+Q–Ana M. 
+
+Q = Quimio 
+
+Procedimientos 
+
+P 
+
+P–Ana M. 
+
+Fácil de identificar 
+
+Examen de laboratorio oncológico 
+
+LO 
+
+L–Ana M. 
+
+L = Lab onco 
+
+Ecografías Oncológicas 
+
+EO 
+
+E–Ana M. 
+
+E = Eco 
+
+Recuperación ambulatoria 
+
+RA 
+
+RA–Ana M. 
+
+R = Recuperación 
+
+Servicios de Salud General (SSG) 
+
+G 
+
+G–Ana M. 
+
+G = General 
+
+Laboratorio General (SSG) 
+
+G 
+
+G–Ana M. 
+
+G = General 
+
+Urgencia Oncológicas 
+
+U 
+
+U-Ana M. 
+
+U = Utgencias 
+
+Ecografías No Oncólogicas 
+
+G 
+
+G. Ana M. 
+
+G=General 
+
+ 
+
+Table 3: Prefijos de ticket por tipo de servicio 
+
+6.3 Pantalla Principal de Turnos y Estados 
+
+La pantalla de atención muestra dos secciones: 
+
+Sección 1: Turno Actual 
+
+Código de turno (prefijo + nombre abreviado) 
+
+Status: "Turno actual" o "Espera" 
+
+Sección 2: Estado de Pacientes por Área 
+
+Relación tipo de servicio → Área visible en pantalla: 
+
+# 
+
+Tipo de Servicio 
+
+Código Turno 
+
+Código Paciente 
+
+Área en Pantalla 
+
+1 
+
+Consulta nueva 
+
+CN–### 
+
+ONC-DNI 
+
+Consultorio 
+
+2 
+
+Consulta de seguimiento 
+
+CS–### 
+
+ONC-DNI 
+
+Consultorio 
+
+3 
+
+Sesión de quimioterapia 
+
+Q–### 
+
+ONC-DNI 
+
+Quimioterapia 
+
+4 
+
+Procedimientos 
+
+P–### 
+
+ONC-DNI 
+
+Procedimientos 
+
+5 
+
+Examen de laboratorio (oncológico) 
+
+LO–### 
+
+ONC-DNI 
+
+Laboratorio Oncológico 
+
+6 
+
+Ecografías 
+
+EO–### 
+
+ONC-DNI 
+
+Ecografías 
+
+7 
+
+Recuperación ambulatoria 
+
+RA–### 
+
+ONC-DNI 
+
+Recuperación Ambulatoria 
+
+8 
+
+Servicios de Salud General (SSG)  
+
+G–### 
+
+SSG-DNI 
+
+Atención General 
+
+9 
+
+Urgencias Oncológicas 
+
+U–### 
+
+ONC-DNI 
+
+Emergencias 
+
+ 
+
+Table 4: Relación servicio, código de turno, código de paciente y área 
+
+6.4 Reglas de Visualización de Pantalla 
+
+Mostrar solo áreas activas: Áreas con estado "En atención" o "Pendiente" 
+
+NO mostrar: Áreas libres (sin pacientes) 
+
+Elementos por área: [Nombre del área] [Paciente abreviado] [Estado] 
+
+Nombre abreviado: Siempre "Nombre Inicial + Inicial Apellido con punto" (ej. María L.) 
+
+Autoscroll: Si hay más áreas activas que espacio, scroll vertical suave automático 
+
+Referencia visual: Ver video de ejemplo en https://www.youtube.com/watch?v=jRnqxURJ120 
+
+Forma 
+
+7. Flujo en Counter de Recepción (Verificación de Paciente) 
+
+Este es el módulo operativo crucial que integra: cita reservada online + cita reservada por Olga + datos reales del paciente + verificación + pase al área correspondiente. 
+
+7.1 Ingreso y Verificación de Datos del Paciente 
+
+Paso 1: Escaneo o Ingreso Manual de Documento 
+
+Quién: Counter de recepción 
+Qué hace: 
+
+Escanea DNI u otro documento (o ingresa manualmente si es necesario) 
+
+Sistema recibe el documento y busca en bases de datos 
+
+Paso 2: Búsqueda en Bases de Datos 
+
+Sistema verifica: 
+
+¿Existe paciente en BD interna? 
+
+¿Existe paciente en BD del ERP? 
+
+¿Tiene código antiguo de HC? 
+
+¿Tiene ONC-DNI o SSG-DNI? 
+
+Lógica de códigos: 
+
+Si existe ONC-DNI → usar ese 
+
+Si solo existe código antiguo → mostrar y permitir migración (conservar ambos) 
+
+Si no existe nada → crear ONC-DNI automáticamente (para servicios oncológicos 1–7) 
+
+Si es servicio SSG (8) → asignar SSG-DNI automáticamente 
+
+Paso 3: Captura de Datos del Paciente 
+
+El sistema captura y permite edición de: 
+
+Datos de lectura automática (DNI): 
+
+Nombre y apellidos completos 
+
+Fecha de nacimiento 
+
+Sexo 
+
+Número de documento 
+
+Datos calculados automáticamente: 
+
+Edad (calculada desde fecha de nacimiento) 
+
+Datos de ingreso manual (si no existe registro anterior): 
+
+Número de teléfono (dato clave – migrar si existe en BD anterior) 
+
+Correo (opcional) 
+
+Dirección (calle, número, etc.) 
+
+Referencia/Punto de referencia (opcional) 
+
+Distrito 
+
+Ciudad 
+
+Motivo Consulta si es paciente no oncológico y oncológico (debió de migrar de las consultas su reserva o se le vuelve a preguntar) 
+
+Campos editables en cualquier momento: 
+
+Teléfono (obligatorio) 
+
+Correo (opcional) 
+
+Dirección (obliqgatorio) 
+
+Referencia (opcional) 
+
+Paso 4: Muestra de Ficha Básica del Paciente 
+
+El sistema siempre muestra: 
+
+Nombre completo 
+
+Número de documento 
+
+Edad 
+
+Código HC asignado (ONC-DNI o SSG-DNI) 
+
+Teléfono 
+
+Motivo Consulta 
+
+Correo (opcional) 
+
+Dirección / Distrito / Ciudad 
+
+7.2 Selección del Tipo de Servicio 
+
+Paso 5: Selecciona Tipo de Servicio 
+
+Opciones: Los 8 servicios mapeados (1–9) 
+
+Lógica automática: 
+
+Servicios 1–8 (oncológicos): Asignan ONC-DNI automáticamente 
+
+Servicio 9 (SSG): Asigna SSG-DNI automáticamente 
+
+Requisitos: 
+
+Si es consulta nueva o seguimiento → requiere seleccionar médico 
+
+Si es quimioterapia, procedimientos, ecografía, laboratorio → la cita debe existir en el sistema (con estado "Sesión programada" para quimio) 
+
+7.3 Validaciones de Base de Datos 
+
+El sistema consulta: 
+
+¿Existe ya el paciente? 
+
+¿Tiene HC antigua? 
+
+¿Tiene ONC-DNI o SSG-DNI? 
+
+¿Tiene citas reservadas para este servicio? 
+
+¿El médico indicado está disponible? 
+
+Resultado: 
+
+Si todo valida → se muestra ficha básica y se procede al siguiente paso 
+
+Si faltan datos → se solicita captura manual 
+
+Si hay inconsistencias → se alerta al counter para revisión 
+
+Forma 
+
+8. Usuarios del Sistema 
+
+El sistema tiene acceso diferenciado por roles. Los 12 usuarios base son: 
+
+# 
+
+Usuario 
+
+Módulos accesibles 
+
+1 
+
+Cotización 
+
+Módulo de cotizaciones, validación de cotización 
+
+2 
+
+Recepción 
+
+Registro de recetas, programación de citas, registro de pacientes 
+
+3 
+
+Médico 
+
+Consulta, generación de órdenes, visualización de disponibilidad 
+
+4 
+
+Enfermería - Quimioterapia 
+
+Registro de sesiones, control de camas, estado de paciente 
+
+5 
+
+Enfermería - Procedimientos 
+
+Registro de procedimientos, control de camas, duración 
+
+6 
+
+Enfermería - Ecografías 
+
+Registro de ecografías, control de disponibilidad 
+
+7 
+
+Laboratorio - Oncológico 
+
+Registro de exámenes, toma de muestras, resultados 
+
+8 
+
+Laboratorio - General 
+
+Registro de exámenes SSG, toma de muestras, resultados 
+
+9 
+
+Farmacia - Validación de stock 
+
+Validación de medicamentos, control de inventario 
+
+10 
+
+Enfermería - Atención General 
+
+Registro de servicios SSG, control de sillas 
+
+11 
+
+Administrativo 
+
+Reportes, análisis, configuración de especialidades 
+
+12 
+
+Comercial 
+
+Reportes de ingresos, seguimiento de pacientes 
+
+ 
+
+Table 5: Usuarios del sistema y módulos accesibles 
+
+Forma 
+
+9. Agenda de Médicos y Capacidad de Atención 
+
+La siguiente tabla detalla la disponibilidad, horarios y capacidad de atención por médico y especialidad: 
+
+Médico 
+
+Especialidad 
+
+Consultorio 
+
+Días 
+
+Horario 
+
+Duración bloque (min) 
+
+Tiempo nueva consulta (min) 
+
+Tiempo seguimiento (min) 
+
+Cap. solo nueva 
+
+Cap. solo seguimiento 
+
+Cap. mixta 
+
+Dr. Antonio Camargo 
+
+Oncología Clínica 
+
+Consultorio 1 
+
+Lun–Vie 
+
+10 am–2 pm 
+
+240 
+
+45 
+
+30 
+
+5 
+
+8 
+
+5–8 
+
+Dr. Antonio Camargo 
+
+Oncología Clínica 
+
+Consultorio 1 
+
+Lun–Vie 
+
+5 pm–7 pm 
+
+120 
+
+45 
+
+30 
+
+2 
+
+4 
+
+2–4 
+
+Dr. Antonio Camargo 
+
+Oncología Clínica 
+
+Consultorio 1 
+
+Sábado 
+
+10 am–1 pm 
+
+180 
+
+45 
+
+30 
+
+4 
+
+6 
+
+4–6 
+
+Dr. Yinno Custodio 
+
+Oncología Clínica 
+
+Consultorio 2 
+
+Mar–Vie 
+
+4 pm–6 pm 
+
+120 
+
+40 
+
+30 
+
+3 
+
+4 
+
+3–4 
+
+Dr. Cárdenas 
+
+Oncología Clínica 
+
+Consultorio 3 
+
+Por consulta 
+
+— 
+
+— 
+
+40 
+
+30 
+
+Pendiente 
+
+Pendiente 
+
+Pendiente 
+
+Dr. Villegas 
+
+Oncología Quirúrgica 
+
+Consultorio 4 
+
+Por consulta 
+
+— 
+
+— 
+
+40 
+
+— 
+
+Pendiente 
+
+— 
+
+Pendiente 
+
+Dr. Cavero 
+
+Radiología Oncológica 
+
+Consultorio 4 
+
+Lun–Mié–Vie 
+
+4 pm–6 pm 
+
+120 
+
+40 
+
+30 
+
+3 
+
+4 
+
+3–4 
+
+Dra. Marylin Toledo 
+
+Psicología 
+
+Consultorio 5 
+
+Por consulta 
+
+— 
+
+— 
+
+— 
+
+30 
+
+— 
+
+— 
+
+Pendiente 
+
+— 
+
+Nutrición 
+
+Consultorio 5 
+
+Por consulta 
+
+— 
+
+— 
+
+— 
+
+30 
+
+— 
+
+— 
+
+Pendiente 
+
+ 
+
+Table 6: Agenda de médicos y capacidad de atención 
+
+Columnas explicadas: 
+
+Duración bloque (min): Tiempo total disponible en el turno 
+
+Tiempo nueva consulta (min): Duración de cada cita de paciente nuevo 
+
+Tiempo seguimiento (min): Duración de cada cita de seguimiento 
+
+Capacidad solo nueva: Máximo de pacientes nuevos que caben en el bloque 
+
+Capacidad solo seguimiento: Máximo de pacientes en seguimiento que caben en el bloque 
+
+Capacidad mixta: Combinación de nuevas y seguimiento en el mismo bloque 
+
+Nota: Para médicos con horarios "Por consulta" (Dr. Cárdenas, Dr. Villegas, Dra. Toledo, Nutrición), pendiente definir días y horarios específicos. 
+
+Forma 
+
+ 
+
+10. Notas Importantes y Tareas Pendientes 
+
+Por Aclarar / Configurar 
+
+[ ] Horarios definitivos: Ratificar horarios de Dr. Cárdenas, Dr. Villegas, Dra. Toledo y Nutrición 
+
+[ ] Formato de impresión de ticket: Definir con impresora de tablet para kiosko 
+
+[ ] Migración de datos: Procedimiento exacto para migración de códigos antiguos de HC 
+
+[ ] Campos adicionales: Completar campos de rellenado de datos de paciente en formulario presencial 
+
+[ ] Requisitos de laboratorio: Detallar los ~136 exámenes con requisitos específicos (ayuno, restricciones horarias, etc.) 
+
+[ ] Cuidados Paliativos: Evaluar timeline de integración al sistema de citas 
+
+[ ] Seguridad: Definir permisos granulares por usuario y límites de visualización de datos 
+
+Consideraciones Operativas 
+
+El sistema debe mantener coherencia entre cita reservada online y presencia real del paciente 
+
+La información del paciente debe estar siempre lista en counter para evitar re-ingreso de datos 
+
+Quimioterapia es un caso especial: solo aparece en citas cuando ya pasó por cotización 
+
+SSG usa nomenclatura diferente (SSG-DNI) para separar registro de pacientes oncológicos vs. generales 
+
+Pantalla de turnos debe actualizarse en tiempo real sin interferir con operación presencial 
+
+Teléfono es dato clave para comunicaciones; debe migrarse de registros anteriores si existen 
+
+Forma 

@@ -16,14 +16,20 @@ import { Doctor } from '../models/doctor.model';
 import { Resource } from '../models/resource.model';
 import { WaitingRoom } from '../models/waiting-room.model';
 
+import { Specialty } from '../models/specialty.model';
+import { MedicalCenter } from '../models/medical-center.model';
+import { ServiceType } from '../models/service-type.model';
+import { DoctorSchedule } from '../models/doctor-schedule.model';
+
 // Determine database type from URL
 const isPostgres = databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://');
 
 export const sequelize = isPostgres
     ? new Sequelize(databaseUrl, {
         dialect: 'postgres',
-        models: [Patient, Appointment, Staff, Queue, ChemoChair, RecoveryRoom, Doctor, Resource, WaitingRoom],
-        logging: false,
+        models: [Patient, Appointment, Staff, Queue, ChemoChair, RecoveryRoom, Doctor, Resource, WaitingRoom, Specialty, MedicalCenter, ServiceType,
+            DoctorSchedule],
+        logging: console.log,
         pool: {
             max: 5,
             min: 0,
@@ -34,6 +40,6 @@ export const sequelize = isPostgres
     : new Sequelize({
         dialect: 'sqlite',
         storage: databaseUrl.replace('sqlite://', ''),
-        models: [Patient, Appointment, Staff, Queue, ChemoChair, RecoveryRoom, Doctor, Resource, WaitingRoom],
+        models: [Patient, Appointment, Staff, Queue, ChemoChair, RecoveryRoom, Doctor, Resource, WaitingRoom, Specialty, MedicalCenter],
         logging: false,
     });

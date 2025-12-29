@@ -12,6 +12,16 @@ export interface Resource {
     notes?: string | null;
     createdAt: string;
     updatedAt: string;
+    doctorId?: number | null;
+    doctor?: {
+        id: number;
+        name: string;
+        status: string;
+        schedules?: {
+            dayOfWeek: number;
+            isActive: boolean;
+        }[];
+    } | null;
 }
 
 export interface CreateResourceData {
@@ -96,6 +106,14 @@ export class ResourceService {
      */
     async getStatistics(): Promise<any> {
         const response = await api.get('/resources/statistics');
+        return response.data;
+    }
+
+    /**
+     * Llamar al siguiente paciente
+     */
+    async callNextPatient(id: number): Promise<Resource> {
+        const response = await api.post(`/resources/${id}/call-next`);
         return response.data;
     }
 }

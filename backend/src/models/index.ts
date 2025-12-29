@@ -5,3 +5,6 @@ export * from './queue.model';
 export * from './chemoChair.model';
 export * from './recoveryRoom.model';
 export * from './doctor.model';
+export * from './quote.model';
+export * from './recipe.model';
+export * from './procedure-order.model';

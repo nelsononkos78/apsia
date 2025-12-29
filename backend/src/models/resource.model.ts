@@ -1,5 +1,6 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo, CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { Patient } from './patient.model';
+import { Doctor } from './doctor.model';
 
 export enum ResourceType {
     CONSULTORIO = 'CONSULTORIO',
@@ -57,6 +58,16 @@ export class Resource extends Model {
 
     @Column({ type: DataType.TEXT, allowNull: true })
     notes!: string | null; // Notas adicionales
+
+    @Column({ type: DataType.INTEGER, defaultValue: 20, allowNull: false })
+    timing!: number; // Tiempo estimado en minutos para el recurso
+
+    @ForeignKey(() => Doctor)
+    @Column({ type: DataType.INTEGER, allowNull: true })
+    doctorId!: number | null;
+
+    @BelongsTo(() => Doctor)
+    doctor!: Doctor | null;
 
     @CreatedAt
     createdAt!: Date;

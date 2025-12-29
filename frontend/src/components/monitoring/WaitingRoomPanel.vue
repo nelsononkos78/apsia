@@ -18,33 +18,25 @@
                 :class="['patient-item', { urgent: record.priority === 'URGENTE' }]"
             >
                 <div class="patient-avatar">
-                    <i class="fas fa-user-circle"></i>
+                    <i class="fas fa-user"></i>
                 </div>
                 <div class="patient-details">
                     <div class="patient-name-row">
-                        <span class="patient-name">{{ record.patient?.firstName }} {{ record.patient?.lastName }}</span>
-                        <span v-if="record.priority === 'URGENTE'" class="urgent-badge">
-                            <i class="fas fa-exclamation-circle"></i>
+                        <span class="patient-name">{{ record.patient?.name || 'Paciente' }}</span>
+                        <span v-if="record.patient?.medicalRecordNumber" class="medical-record-badge">
+                            {{ record.patient.medicalRecordNumber }}
                         </span>
                     </div>
-                    <div class="patient-meta">
-                        <span class="meta-item">
+                    <div class="patient-meta-row">
+                        <span class="meta-item office-badge">
+                            <i class="fas fa-door-open"></i>
+                            {{ getAssignedResource(record.appointment) }}
+                        </span>
+                        <span class="meta-item wait-time">
                             <i class="fas fa-clock"></i>
                             {{ calculateWaitTime(record.checkInTime) }}
                         </span>
-                        <span class="meta-item">
-                            <i class="fas fa-id-card"></i>
-                            {{ record.patient?.documentId }}
-                        </span>
                     </div>
-                </div>
-                <div class="patient-actions">
-                    <button @click="callPatient(record.id)" class="action-icon-btn" title="Llamar">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                    <button @click="markAttended(record.id)" class="action-icon-btn" title="Atendido">
-                        <i class="fas fa-check-circle"></i>
-                    </button>
                 </div>
             </div>
 
@@ -63,7 +55,25 @@ import { useMonitoringStore } from '../../stores/monitoring.store';
 import { waitingRoomService } from '../../services/waiting-room.service';
 
 const monitoringStore = useMonitoringStore();
-const { waitingPatients } = storeToRefs(monitoringStore);
+const { waitingPatients, resources } = storeToRefs(monitoringStore);
+
+function getAssignedResource(appointment?: any) {
+    if (!appointment) return 'Sin asignar';
+    
+    // 1. Intentar por resourceId directo
+    if (appointment.resourceId) {
+        const resource = resources.value.find(r => r.id === appointment.resourceId);
+        if (resource) return resource.name;
+    }
+    
+    // 2. Intentar por doctorId
+    if (appointment.doctorId) {
+        const resource = resources.value.find(r => r.doctorId === appointment.doctorId);
+        if (resource) return resource.name;
+    }
+    
+    return 'Sin asignar';
+}
 
 const urgentCount = computed(() => 
     waitingPatients.value.filter(p => p.priority === 'URGENTE').length
@@ -172,11 +182,11 @@ async function markAttended(id: number) {
 .patient-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin-bottom: 8px;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
     background: #fafafa;
-    border-radius: 10px;
+    border-radius: 8px;
     transition: all 0.2s ease;
     border-left: 3px solid transparent;
 }
@@ -192,8 +202,8 @@ async function markAttended(id: number) {
 }
 
 .patient-avatar {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
     display: flex;
@@ -203,24 +213,25 @@ async function markAttended(id: number) {
 }
 
 .patient-avatar i {
-    font-size: 24px;
+    font-size: 16px;
     color: #00838f;
 }
 
 .patient-details {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .patient-name-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
 }
 
 .patient-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #263238;
     white-space: nowrap;
@@ -228,16 +239,38 @@ async function markAttended(id: number) {
     text-overflow: ellipsis;
 }
 
-.urgent-badge {
-    color: #f44336;
-    font-size: 14px;
+.medical-record-badge {
+    background: #f0f0f0;
+    color: #555;
+    padding: 2px 8px;
+    margin-left: 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    border: 1px solid #ddd;
 }
 
-.patient-meta {
+.patient-meta-row {
     display: flex;
+    align-items: center;
     gap: 12px;
-    font-size: 11px;
+}
+
+.office-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.wait-time {
+    font-size: 10px;
     color: #78909c;
+    font-weight: 500;
 }
 
 .meta-item {
@@ -247,7 +280,7 @@ async function markAttended(id: number) {
 }
 
 .meta-item i {
-    font-size: 10px;
+    font-size: 9px;
 }
 
 .patient-actions {

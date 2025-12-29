@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import { sequelize } from './config/database';
 import { errorHandler } from './middleware/error.handler';
 import authRoutes from './routes/auth.routes';
@@ -16,9 +18,13 @@ import visionRoutes from './routes/vision.routes';
 import resourceRoutes from './routes/resource.routes';
 import waitingRoomRoutes from './routes/waiting-room.routes';
 import monitoringRoutes from './routes/monitoring.routes';
+import internalFlowRoutes from './routes/internal-flow.routes';
+import checkinRoutes from './routes/checkin.routes';
+import serviceTypeRoutes from './routes/service-type.routes';
+import doctorRoutes from './routes/doctor.routes';
 // import ocrRoutes from './routes/ocr.routes';
 
-dotenv.config();
+
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '4000', 10);
@@ -42,6 +48,10 @@ app.use('/api/vision', visionRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/waiting-room', waitingRoomRoutes);
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/internal', internalFlowRoutes);
+app.use('/api/checkin', checkinRoutes);
+app.use('/api/service-types', serviceTypeRoutes);
+app.use('/api/doctors', doctorRoutes);
 // app.use('/api/ocr', ocrRoutes);
 
 app.get('/', (req: Request, res: Response) => {

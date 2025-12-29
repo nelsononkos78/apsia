@@ -1,0 +1,66 @@
+Plan de Implementación - Flujo Completo del Sistema de Citas Médicas
+Descripción del Objetivo
+El objetivo es alinear el código base actual con el documento "Guía de Desarrollo". Esto implica implementar flujos internos complejos para Quimioterapia y Procedimientos, refinar la experiencia de Recepción/Counter y asegurar que la Pantalla Pública (TV) refleje con precisión los 9 tipos de servicio y sus reglas de cola específicas.
+
+Revisión de Usuario Requerida
+IMPORTANT
+
+Migraciones de Base de Datos: Se requieren cambios significativos en las tablas Patient y Appointment. Los datos existentes podrían necesitar estrategias de migración si este fuera un sistema en producción (asumiendo dev/test por ahora). Definiciones de Roles: Necesitamos confirmar si el modelo actual Staff soporta los 12 roles distintos definidos o si se necesita un nuevo modelo Role.
+
+Cambios Propuestos
+Backend
+[MODIFICAR] 
+patient.model.ts
+Agregar campos onc_dni y ssg_dni.
+Agregar lógica para generar estos códigos según el tipo de servicio.
+[MODIFICAR] 
+appointment.model.ts
+Agregar enum service_type (9 tipos).
+Agregar campo internal_status para flujos de Quimio/Procedimientos (ej. PENDIENTE_COTIZACION, COTIZACION_APROBADA).
+[NUEVO] 
+quote.model.ts
+Modelo para rastrear cotizaciones de procedimientos/quimio.
+[NUEVO] 
+internal-flow.controller.ts
+Endpoints para:
+POST /internal/order: Médico crea orden.
+POST /internal/quote: Farmacia/Admin genera cotización.
+POST /internal/approve: Paciente aprueba cotización.
+Frontend
+[MODIFICAR] 
+Checkin.vue
+Refactorizar para implementar los pasos de "7. Flujo en Counter de Recepción".
+Agregar lógica de búsqueda/verificación de paciente.
+Agregar selección de servicio con asignación automática de código DNI.
+[NUEVO] 
+InternalFlowDashboard.vue
+Vista para que Farmacia/Admin gestione los estados internos de Quimio/Procedimientos.
+[MODIFY] 
+TVDisplay.vue
+Actualizar diseño para soportar 9 columnas/áreas.
+Implementar la lógica de prefijos de ticket específicos (CN, CS, Q, P, etc.).
+[MODIFICAR] 
+MonitoringDashboard.vue
+Lógica de Selección: Implementar flujo: Seleccionar Día (Calendario) -> Seleccionar Hora -> Actualizar Vista.
+Reloj Digital: Agregar componente de reloj en tiempo real en la esquina superior.
+Tarjetas de Consultorio: Mostrar línea de texto "Dr. [Nombre] - Paciente: [Nombre]".
+Tarjetas de Tratamiento/Recuperación: Mostrar línea de texto "Paciente: [Nombre] - Tratamiento: [Detalle]".
+Actualización en Tiempo Real: Integrar socket.io-client para escuchar eventos de cambio de estado y actualizar la vista automáticamente sin recargar.
+Plan de Verificación
+Pruebas Automatizadas
+Backend: Pruebas unitarias para generación de códigos de Paciente y transiciones de estado de Flujo Interno.
+API: Probar endpoints para crear órdenes y aprobar cotizaciones.
+Verificación Manual
+Flujo Quimio:
+Iniciar sesión como Médico -> Crear Orden Quimio.
+Iniciar sesión como Farmacia -> Validar Stock y Crear Cotización.
+Iniciar sesión como Admin -> Aprobar Cotización.
+Iniciar sesión como Paciente (o Counter) -> Verificar que "Sesión programada" ahora está disponible para reservar.
+Flujo Counter:
+Ingresar un DNI.
+Verificar que el sistema detecta si existe ONC-DNI.
+Seleccionar "Consulta Nueva".
+Verificar que el Ticket se imprime con prefijo "CN-".
+Pantalla TV:
+Crear citas activas en diferentes servicios.
+Verificar que aparecen en las columnas correctas en /tv.

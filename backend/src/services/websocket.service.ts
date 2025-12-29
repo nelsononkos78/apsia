@@ -80,6 +80,35 @@ export class WebSocketService {
     }
 
     /**
+     * Emitir actualización de estado de TV
+     */
+    emitTvStateUpdate(state: any) {
+        this.io.to('monitoring').emit('tv:state-updated', state);
+    }
+
+    /**
+     * Emitir evento de llamada a TV
+     */
+    emitTvCall(callData: any) {
+        console.log('📡 Broadcasting tv:call to all clients:', callData);
+        this.io.emit('tv:call', callData);
+    }
+
+    /**
+     * Alias for emitTvCall to match DoctorService usage
+     */
+    emitToTv(callData: any) {
+        this.emitTvCall(callData);
+    }
+
+    /**
+     * Emitir actualización de cita
+     */
+    emitAppointmentUpdate(appointment: any) {
+        this.io.to('monitoring').emit('appointment:updated', appointment);
+    }
+
+    /**
      * Obtener instancia de Socket.IO
      */
     getIO(): SocketIOServer {

@@ -11,14 +11,17 @@ export interface WaitingRoomRecord {
     notes?: string | null;
     patient?: {
         id: number;
-        firstName: string;
-        lastName: string;
-        documentId: string;
+        name: string;
+        firstName?: string;
+        lastName?: string;
+        documentNumber: string;
     };
     appointment?: {
         id: number;
         dateTime: string;
         serviceType: string;
+        doctorId?: number;
+        resourceId?: number;
     };
     createdAt: string;
     updatedAt: string;

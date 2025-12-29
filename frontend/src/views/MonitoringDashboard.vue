@@ -18,6 +18,15 @@
                         <h1>Panel de Monitoreo</h1>
                         <p class="subtitle">{{ currentDateDisplay }}</p>
                     </div>
+                    <div class="header-center">
+                        <DigitalClock />
+                        <div class="time-selector">
+                            <select v-model="selectedHour" class="hour-select">
+                                <option :value="null">Tiempo Real</option>
+                                <option v-for="h in hours" :key="h" :value="h">{{ h }}:00</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="connection-indicator" :class="{ connected: isConnected }">
                         <i :class="isConnected ? 'fas fa-circle' : 'fas fa-circle-notch fa-spin'"></i>
                         <span>{{ isConnected ? 'Conectado' : 'Conectando...' }}</span>
@@ -28,14 +37,17 @@
                     <ResourceGrid 
                         type="CONSULTORIO"
                         :resources="consultorios"
+                        :resourceDetails="resourceDetails"
                     />
                     <ResourceGrid 
                         type="TRATAMIENTO"
                         :resources="tratamientos"
+                        :resourceDetails="resourceDetails"
                     />
                     <ResourceGrid 
                         type="ESTANCIA"
                         :resources="estancias"
+                        :resourceDetails="resourceDetails"
                     />
                 </div>
             </main>
@@ -54,12 +66,15 @@ import api from '../services/api';
 import WaitingRoomPanel from '../components/monitoring/WaitingRoomPanel.vue';
 import CalendarPanel from '../components/monitoring/CalendarPanel.vue';
 import ResourceGrid from '../components/monitoring/ResourceGrid.vue';
+import DigitalClock from '../components/monitoring/DigitalClock.vue';
 import { websocketService } from '../services/websocket.service';
 
 const monitoringStore = useMonitoringStore();
-const { consultorios, tratamientos, estancias, selectedDate } = storeToRefs(monitoringStore);
+const { consultorios, tratamientos, estancias, selectedDate, dailyStatistics } = storeToRefs(monitoringStore);
 
 const isConnected = ref(true);
+const selectedHour = ref<number | null>(null);
+const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 to 20:00
 let refreshInterval: number | null = null;
 
 const currentDateDisplay = computed(() => {
@@ -69,6 +84,37 @@ const currentDateDisplay = computed(() => {
         month: 'long',
         day: 'numeric'
     });
+});
+
+const resourceDetails = computed(() => {
+    const details: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string }> = {};
+    
+    let relevantAppointments = [];
+
+    if (selectedHour.value !== null) {
+        // Filter by scheduled hour
+        relevantAppointments = dailyStatistics.value?.appointments?.list?.filter((a: any) => {
+            const date = new Date(a.dateTime);
+            return date.getHours() === selectedHour.value;
+        }) || [];
+    } else {
+        // Real-time: Active appointments
+        relevantAppointments = dailyStatistics.value?.appointments?.list?.filter((a: any) => 
+            a.status === 'IN_PROGRESS' || a.status === 'CHECKED_IN'
+        ) || [];
+    }
+
+    relevantAppointments.forEach((apt: any) => {
+        if (apt.resourceId) {
+            details[apt.resourceId] = {
+                doctorName: apt.doctor ? `Dr. ${apt.doctor.name.split(' ')[0]}` : undefined,
+                patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : undefined,
+                treatmentInfo: apt.serviceType
+            };
+        }
+    });
+
+    return details;
 });
 
 async function loadData() {
@@ -117,6 +163,14 @@ onMounted(async () => {
     
     websocketService.on('waitingRoom:removed', (recordId: number) => {
         monitoringStore.removeFromWaitingRoom(recordId);
+    });
+
+    websocketService.on('appointment:updated', (appointment: any) => {
+        monitoringStore.updateAppointment(appointment);
+    });
+
+    websocketService.on('appointment:created', (appointment: any) => {
+        monitoringStore.updateAppointment(appointment);
     });
     
     const connectionCheckInterval = setInterval(() => {
@@ -204,6 +258,24 @@ onMounted(async () => {
     font-size: 13px;
     color: #78909c;
     text-transform: capitalize;
+}
+
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.hour-select {
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid #cfd8dc;
+    background: white;
+    font-size: 12px;
+    color: #455a64;
+    cursor: pointer;
+    outline: none;
 }
 
 .connection-indicator {

@@ -1,6 +1,12 @@
 import { Request, Response } from 'express';
 import { ResourceService } from '../services/resource.service';
-import { ResourceType, ResourceStatus, InhabilitadoReason } from '../models/resource.model';
+import { Resource, ResourceType, ResourceStatus, InhabilitadoReason } from '../models/resource.model';
+import { WaitingRoom, WaitingRoomStatus } from '../models/waiting-room.model';
+import { Appointment } from '../models/appointment.model';
+import { Patient } from '../models/patient.model';
+import { Queue } from '../models/queue.model';
+import { getWebSocketService } from '../services/websocket.service';
+import { getTvService } from '../services/tv.service';
 
 const resourceService = new ResourceService();
 
@@ -107,13 +113,15 @@ export class ResourceController {
                 return res.status(400).json({ error: 'Razón de inhabilitación inválida' });
             }
 
-            const resource = await resourceService.updateResourceStatus(
+            await resourceService.updateResourceStatus(
                 parseInt(id),
                 status,
                 reason
             );
 
-            res.json(resource);
+            // Reload with associations for complete response
+            const resourceWithData = await resourceService.getResourceById(parseInt(id));
+            res.json(resourceWithData);
         } catch (error: any) {
             if (error.message === 'Recurso no encontrado') {
                 return res.status(404).json({ error: error.message });
@@ -160,13 +168,105 @@ export class ResourceController {
     async releaseResource(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const resource = await resourceService.releaseResource(parseInt(id));
-            res.json(resource);
+            await resourceService.releaseResource(parseInt(id));
+
+            // Reload with associations for complete response
+            const resourceWithData = await resourceService.getResourceById(parseInt(id));
+            res.json(resourceWithData);
         } catch (error: any) {
             if (error.message === 'Recurso no encontrado') {
                 return res.status(404).json({ error: error.message });
             }
             res.status(500).json({ error: error.message });
+        }
+    }
+
+    /**
+     * POST /api/resources/:id/call-next-patient
+     * Llamar al siguiente paciente para un recurso
+     */
+    async callNextPatient(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const resource = await resourceService.getResourceById(Number(id));
+
+            if (!resource || !resource.doctorId) {
+                return res.status(400).json({ message: 'Resource not found or no doctor assigned' });
+            }
+
+            // Find next patient for this doctor
+            const nextPatient = await WaitingRoom.findOne({
+                where: {
+                    status: WaitingRoomStatus.ESPERANDO,
+                    // You might want to filter by doctorId if WaitingRoom has it, or via Appointment
+                },
+                include: [{
+                    model: Appointment,
+                    where: { doctorId: resource.doctorId },
+                    include: [Queue]
+                }, {
+                    model: Patient
+                }],
+                order: [['priority', 'DESC'], ['checkInTime', 'ASC']]
+            });
+
+            if (!nextPatient) {
+                return res.status(404).json({ message: 'No hay más pacientes en cola para este médico.' });
+            }
+
+            // Call the patient (reuse logic from DoctorService or call it here)
+            // For now, let's implement the logic here or inject DoctorService\n            // Ideally, we should move this to a service.
+
+            // Update WaitingRoom status
+            await nextPatient.update({ status: WaitingRoomStatus.LLAMADO });
+
+            // Reload with associations for WebSocket event
+            const updatedWaitingRoom = await WaitingRoom.findByPk(nextPatient.id, {
+                include: [{ model: Patient }, { model: Appointment, include: [Queue] }]
+            });
+
+            // Update Resource
+            await resource.update({
+                status: 'OCUPADO',
+                currentPatientId: nextPatient.patientId
+            });
+
+            // Update Queue status (Set as current turn)
+            if (nextPatient.appointmentId) {
+                // Set all other items as not current
+                await Queue.update({ isCurrent: false }, { where: { isCompleted: false } });
+
+                // Set this item as current
+                await Queue.update({ isCurrent: true }, { where: { appointmentId: nextPatient.appointmentId } });
+            }
+
+            // Broadcast TV state update
+            const tvService = getTvService();
+            await tvService.broadcastTvState();
+
+            // Emit events
+            const wsService = getWebSocketService();
+            wsService.emitTvCall({
+                ticket: nextPatient.appointment?.queue?.ticketNumber || `T-${nextPatient.id}`,
+                patient: `${nextPatient.patient.firstName} ${nextPatient.patient.lastName}`,
+                timestamp: new Date()
+            });
+
+            wsService.emitAppointmentUpdate(nextPatient.appointment);
+            wsService.emitResourceUpdate(resource);
+
+            // Emit waiting room update
+            if (updatedWaitingRoom) {
+                wsService.emitWaitingRoomUpdate(updatedWaitingRoom.toJSON());
+            }
+
+            // Return updated resource
+            const updatedResource = await resourceService.getResourceById(Number(id));
+            res.json(updatedResource);
+
+        } catch (error: any) {
+            console.error('Error calling next patient:', error);
+            res.status(500).json({ message: 'Error calling next patient', error });
         }
     }
 

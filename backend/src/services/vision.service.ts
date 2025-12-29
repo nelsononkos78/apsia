@@ -92,7 +92,9 @@ IMPORTANTE:
             return data;
         } catch (error: any) {
             console.error('Vision AI Error:', error.response?.data || error.message);
-            throw new Error('Error al procesar la imagen del documento');
+            // Return the actual error message to the frontend
+            const errorMessage = error.response?.data?.error?.message || error.message || 'Error desconocido en Vision AI';
+            throw new Error(`Error al procesar la imagen: ${errorMessage}`);
         }
     }
 

@@ -1,4 +1,7 @@
 import { Resource, ResourceStatus, ResourceType, InhabilitadoReason } from '../models/resource.model';
+import { Patient } from '../models/patient.model';
+import { Doctor } from '../models/doctor.model';
+import { DoctorSchedule } from '../models/doctor-schedule.model';
 import { Op } from 'sequelize';
 import { getWebSocketService } from './websocket.service';
 
@@ -8,6 +11,14 @@ export class ResourceService {
      */
     async getAllResources(): Promise<Resource[]> {
         return await Resource.findAll({
+            include: [
+                { model: Patient, as: 'currentPatient' },
+                {
+                    model: Doctor,
+                    as: 'doctor',
+                    include: [{ model: DoctorSchedule, as: 'schedules' }]
+                }
+            ],
             order: [['type', 'ASC'], ['name', 'ASC']]
         });
     }
@@ -18,6 +29,14 @@ export class ResourceService {
     async getResourcesByType(type: ResourceType): Promise<Resource[]> {
         return await Resource.findAll({
             where: { type },
+            include: [
+                { model: Patient, as: 'currentPatient' },
+                {
+                    model: Doctor,
+                    as: 'doctor',
+                    include: [{ model: DoctorSchedule, as: 'schedules' }]
+                }
+            ],
             order: [['name', 'ASC']]
         });
     }
@@ -26,7 +45,16 @@ export class ResourceService {
      * Obtener un recurso por ID
      */
     async getResourceById(id: number): Promise<Resource | null> {
-        return await Resource.findByPk(id);
+        return await Resource.findByPk(id, {
+            include: [
+                { model: Patient, as: 'currentPatient' },
+                {
+                    model: Doctor,
+                    as: 'doctor',
+                    include: [{ model: DoctorSchedule, as: 'schedules' }]
+                }
+            ]
+        });
     }
 
     /**
@@ -80,7 +108,12 @@ export class ResourceService {
         try {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting resource update via WebSocket:', { id: resource.id, name: resource.name, status: resource.status });
-            wsService.emitResourceUpdate(resource.toJSON());
+
+            // Reload with associations for complete data
+            const resourceWithAssociations = await this.getResourceById(id);
+            if (resourceWithAssociations) {
+                wsService.emitResourceUpdate(resourceWithAssociations.toJSON());
+            }
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }
@@ -117,7 +150,12 @@ export class ResourceService {
         try {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting resource update via WebSocket (assign):', { id: resource.id, name: resource.name, status: resource.status });
-            wsService.emitResourceUpdate(resource.toJSON());
+
+            // Reload with associations for complete data
+            const resourceWithAssociations = await this.getResourceById(resourceId);
+            if (resourceWithAssociations) {
+                wsService.emitResourceUpdate(resourceWithAssociations.toJSON());
+            }
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }
@@ -144,7 +182,12 @@ export class ResourceService {
         try {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting resource update via WebSocket (release):', { id: resource.id, name: resource.name, status: resource.status });
-            wsService.emitResourceUpdate(resource.toJSON());
+
+            // Reload with associations for complete data
+            const resourceWithAssociations = await this.getResourceById(resourceId);
+            if (resourceWithAssociations) {
+                wsService.emitResourceUpdate(resourceWithAssociations.toJSON());
+            }
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }

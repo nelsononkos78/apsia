@@ -1,7 +1,9 @@
 import { WaitingRoom, WaitingRoomStatus, WaitingRoomPriority } from '../models/waiting-room.model';
 import { Patient } from '../models/patient.model';
 import { Appointment } from '../models/appointment.model';
+import { Queue } from '../models/queue.model';
 import { getWebSocketService } from './websocket.service';
+import { getTvService } from './tv.service';
 
 export class WaitingRoomService {
     /**
@@ -24,13 +26,32 @@ export class WaitingRoomService {
             status: WaitingRoomStatus.ESPERANDO
         });
 
+        // Fetch with associations for the UI
+        const recordWithData = await WaitingRoom.findByPk(newRecord.id, {
+            include: [
+                {
+                    model: Patient
+                },
+                {
+                    model: Appointment,
+                    include: ['serviceType']
+                }
+            ]
+        });
+
         // Emit WebSocket event
         try {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting waitingRoom:added via WebSocket:', { id: newRecord.id });
-            wsService.emitWaitingRoomAdded(newRecord.toJSON());
+            if (recordWithData) {
+                wsService.emitWaitingRoomAdded(recordWithData.toJSON());
+            }
+
+            // Broadcast TV state
+            const tvService = getTvService();
+            await tvService.broadcastTvState();
         } catch (error) {
-            console.error('❌ WebSocket not initialized:', error);
+            console.error('❌ WebSocket or TV Service error:', error);
         }
 
         return newRecord;
@@ -46,12 +67,11 @@ export class WaitingRoomService {
             },
             include: [
                 {
-                    model: Patient,
-                    attributes: ['id', 'firstName', 'lastName', 'documentId']
+                    model: Patient
                 },
                 {
                     model: Appointment,
-                    attributes: ['id', 'dateTime', 'serviceType']
+                    include: ['serviceType']
                 }
             ],
             order: [
@@ -68,12 +88,11 @@ export class WaitingRoomService {
         return await WaitingRoom.findAll({
             include: [
                 {
-                    model: Patient,
-                    attributes: ['id', 'firstName', 'lastName', 'documentId']
+                    model: Patient
                 },
                 {
                     model: Appointment,
-                    attributes: ['id', 'dateTime', 'serviceType']
+                    include: ['serviceType']
                 }
             ],
             order: [['checkInTime', 'DESC']]
@@ -92,11 +111,26 @@ export class WaitingRoomService {
         record.status = status;
         await record.save();
 
+        // Fetch with associations for the UI
+        const recordWithData = await WaitingRoom.findByPk(record.id, {
+            include: [
+                {
+                    model: Patient
+                },
+                {
+                    model: Appointment,
+                    include: ['serviceType']
+                }
+            ]
+        });
+
         // Emit WebSocket event
         try {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting waitingRoom:updated via WebSocket:', { id: record.id, status: record.status });
-            wsService.emitWaitingRoomUpdate(record.toJSON());
+            if (recordWithData) {
+                wsService.emitWaitingRoomUpdate(recordWithData.toJSON());
+            }
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }
@@ -108,14 +142,86 @@ export class WaitingRoomService {
      * Llamar a un paciente (cambiar estado a LLAMADO)
      */
     async callPatient(id: number): Promise<WaitingRoom> {
-        return await this.updatePatientStatus(id, WaitingRoomStatus.LLAMADO);
+        const record = await WaitingRoom.findByPk(id);
+        if (!record) {
+            throw new Error('Registro no encontrado');
+        }
+
+        // Update WaitingRoom status
+        record.status = WaitingRoomStatus.LLAMADO;
+        await record.save();
+
+        // Update Queue status
+        if (record.appointmentId) {
+            // Set all other items as not current
+            await Queue.update({ isCurrent: false }, { where: { isCompleted: false } });
+
+            // Set this item as current
+            await Queue.update({ isCurrent: true }, { where: { appointmentId: record.appointmentId } });
+        }
+
+        // Broadcast TV state
+        const tvService = getTvService();
+        await tvService.broadcastTvState();
+
+        // Emit specific TV call event
+        try {
+            const wsService = getWebSocketService();
+            const recordWithData = await WaitingRoom.findByPk(id, {
+                include: [
+                    { model: Patient },
+                    {
+                        model: Appointment,
+                        include: [Queue]
+                    }
+                ]
+            });
+            if (recordWithData) {
+                wsService.emitTvCall({
+                    ticket: recordWithData.appointment?.queue?.ticketNumber || '---',
+                    patient: recordWithData.patient ? `${recordWithData.patient.firstName} ${recordWithData.patient.lastName}` : '',
+                    timestamp: new Date()
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error emitting tv:call:', error);
+        }
+
+        // Emit standard waiting room update
+        await this.updatePatientStatus(id, WaitingRoomStatus.LLAMADO);
+
+        return record;
     }
 
     /**
      * Marcar paciente como atendido
      */
     async markAsAttended(id: number): Promise<WaitingRoom> {
-        return await this.updatePatientStatus(id, WaitingRoomStatus.ATENDIDO);
+        const record = await WaitingRoom.findByPk(id);
+        if (!record) {
+            throw new Error('Registro no encontrado');
+        }
+
+        // Update WaitingRoom status
+        record.status = WaitingRoomStatus.ATENDIDO;
+        await record.save();
+
+        // Update Queue status
+        if (record.appointmentId) {
+            await Queue.update(
+                { isCompleted: true, isCurrent: false },
+                { where: { appointmentId: record.appointmentId } }
+            );
+        }
+
+        // Broadcast TV state
+        const tvService = getTvService();
+        await tvService.broadcastTvState();
+
+        // Emit standard waiting room update
+        await this.updatePatientStatus(id, WaitingRoomStatus.ATENDIDO);
+
+        return record;
     }
 
     /**
@@ -134,8 +240,12 @@ export class WaitingRoomService {
             const wsService = getWebSocketService();
             console.log('🔄 Emitting waitingRoom:removed via WebSocket:', { id });
             wsService.emitWaitingRoomRemoved(id);
+
+            // Broadcast TV state
+            const tvService = getTvService();
+            await tvService.broadcastTvState();
         } catch (error) {
-            console.error('❌ WebSocket not initialized:', error);
+            console.error('❌ WebSocket or TV Service error:', error);
         }
     }
 

@@ -1,7 +1,9 @@
 import { sequelize } from '../config/database';
 import { Resource, ResourceType, ResourceStatus } from '../models/resource.model';
 import { WaitingRoom, WaitingRoomPriority } from '../models/waiting-room.model';
-import { Appointment, AppointmentStatus, ServiceType } from '../models/appointment.model';
+import { Appointment, AppointmentStatus, ServiceTypeEnum } from '../models/appointment.model';
+import { ServiceType as ServiceTypeModel } from '../models/service-type.model';
+import { seedServiceTypes } from './seed-service-types';
 import { Patient } from '../models/patient.model';
 import { Doctor } from '../models/doctor.model';
 
@@ -62,9 +64,8 @@ async function seedPatients() {
 
     for (let i = 0; i < 20; i++) {
         patients.push(await Patient.create({
-            firstName: firstNames[i % firstNames.length],
-            lastName: lastNames[i % lastNames.length],
-            documentId: `DOC${1000 + i}`,
+            name: `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
+            dni: `DOC${1000 + i}`,
             birthDate: new Date(1950 + (i * 2), i % 12, (i % 28) + 1),
             phone: `555-${1000 + i}`,
             email: `patient${i}@example.com`
@@ -130,13 +131,14 @@ async function seedAppointments(patients: Patient[], doctors: Doctor[], resource
             appointmentDate.setHours(hour, minute, 0, 0);
 
             // Seleccionar recurso basado en el tipo de servicio
-            const serviceTypes = [ServiceType.CONSULTATION, ServiceType.CHEMOTHERAPY, ServiceType.RECOVERY];
-            const serviceType = serviceTypes[i % serviceTypes.length];
+            const allServiceTypes = await ServiceTypeModel.findAll();
+            const st = allServiceTypes[i % allServiceTypes.length];
+            const serviceType = st.code;
 
             let resource;
-            if (serviceType === ServiceType.CONSULTATION) {
+            if (serviceType === ServiceTypeEnum.CONSULTATION_NEW) {
                 resource = resources.consultorios[i % resources.consultorios.length];
-            } else if (serviceType === ServiceType.CHEMOTHERAPY) {
+            } else if (serviceType === ServiceTypeEnum.CHEMOTHERAPY) {
                 resource = resources.tratamientos[i % resources.tratamientos.length];
             } else {
                 resource = resources.estancias[i % resources.estancias.length];
@@ -160,7 +162,7 @@ async function seedAppointments(patients: Patient[], doctors: Doctor[], resource
                 doctorId: doctor.id,
                 resourceId: resource.id,
                 dateTime: appointmentDate,
-                serviceType,
+                serviceTypeId: st.id,
                 status,
                 specialty: doctor.specialty,
                 notes: `Cita ${i + 1} del día ${day + 1}`,
@@ -214,6 +216,8 @@ async function main() {
         // Sincronizar modelos (esto creará las tablas si no existen)
         await sequelize.sync({ force: true }); // CUIDADO: force: true borra todas las tablas
         console.log('✅ Database synced\n');
+
+        await seedServiceTypes();
 
         // Seed data
         const resources = await seedResources();

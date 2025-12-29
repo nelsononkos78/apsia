@@ -21,6 +21,10 @@
                 v-for="resource in resources" 
                 :key="resource.id"
                 :resource="resource"
+                :doctorName="resource.doctor?.name || resourceDetails?.[resource.id]?.doctorName"
+                :patientName="resourceDetails[resource.id]?.patientName"
+                :treatmentInfo="resourceDetails[resource.id]?.treatmentInfo"
+                :waitingCount="getWaitingCount(resource.doctorId)"
             />
         </div>
 
@@ -35,13 +39,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import ResourceCard from './ResourceCard.vue';
 import AddResourceModal from './AddResourceModal.vue';
 import type { Resource } from '../../services/resource.service';
+import { useMonitoringStore } from '../../stores/monitoring.store';
 
 const props = defineProps<{
     type: 'CONSULTORIO' | 'TRATAMIENTO' | 'ESTANCIA';
     resources: Resource[];
+    resourceDetails?: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string }>;
 }>();
 
 const showAddModal = ref(false);
@@ -75,6 +82,14 @@ const occupiedCount = computed(() =>
 const disabledCount = computed(() => 
     props.resources.filter(r => r.status === 'INHABILITADO').length
 );
+
+const monitoringStore = useMonitoringStore();
+const { waitingPatients } = storeToRefs(monitoringStore);
+
+function getWaitingCount(doctorId?: number) {
+    if (!doctorId) return 0;
+    return waitingPatients.value.filter(p => p.appointment?.doctorId === doctorId).length;
+}
 
 function handleResourceAdded() {
     showAddModal.value = false;

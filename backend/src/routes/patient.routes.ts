@@ -5,6 +5,6 @@ import { authenticateToken } from '../middleware/auth.middleware';
 const router = Router();
 
 router.get('/', getPatients); // Public for check-in kiosks
-router.post('/', authenticateToken, createPatient);
+router.post('/', createPatient);
 
 export default router;

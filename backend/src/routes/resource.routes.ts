@@ -24,6 +24,7 @@ router.post('/', resourceController.createResource.bind(resourceController));
 
 // Actualizar estado de un recurso
 router.put('/:id/status', resourceController.updateResourceStatus.bind(resourceController));
+router.post('/:id/call-next', resourceController.callNextPatient.bind(resourceController));
 
 // Asignar paciente a un recurso
 router.post('/:id/assign', resourceController.assignPatient.bind(resourceController));

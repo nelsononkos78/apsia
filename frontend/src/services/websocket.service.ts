@@ -80,9 +80,31 @@ class WebSocketService {
             console.log('📥 WebSocket received statistics:updated', statistics);
             this.emit('statistics:updated', statistics);
         });
+
+        // TV events
+        this.socket.on('tv:state-updated', (state) => {
+            console.log('📥 WebSocket received tv:state-updated', state);
+            this.emit('tv:state-updated', state);
+        });
+
+        this.socket.on('tv:call', (data) => {
+            console.log('📥 WebSocket received tv:call', data);
+            this.emit('tv:call', data);
+        });
+
+        // Appointment events
+        this.socket.on('appointment:updated', (appointment) => {
+            console.log('📥 WebSocket received appointment:updated', appointment);
+            this.emit('appointment:updated', appointment);
+        });
+
+        this.socket.on('appointment:created', (appointment) => {
+            console.log('📥 WebSocket received appointment:created', appointment);
+            this.emit('appointment:created', appointment);
+        });
     }
 
-    private joinMonitoring() {
+    public joinMonitoring() {
         if (this.socket?.connected) {
             this.socket.emit('join:monitoring');
         }

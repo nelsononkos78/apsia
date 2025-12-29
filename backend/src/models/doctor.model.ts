@@ -1,31 +1,47 @@
-import { Table, Column, Model, DataType, HasMany, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, HasMany, CreatedAt, UpdatedAt, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { Appointment } from './appointment.model';
+import { Specialty } from './specialty.model';
+import { MedicalCenter } from './medical-center.model';
+import { DoctorSchedule } from './doctor-schedule.model';
 
-export enum Specialty {
-    ONCOLOGIA_CLINICA = 'Oncología Clínica',
-    ONCOLOGIA_QUIRURGICA = 'Oncología Quirúrgica',
-    RADIOTERAPIA = 'Radioterapia',
-    HEMATOLOGIA = 'Hematología',
-    CIRUGIA_ONCOLOGICA = 'Cirugía Oncológica'
-}
-
-@Table({ tableName: 'doctors' })
+@Table({ tableName: 'doctors', timestamps: false })
 export class Doctor extends Model {
     @Column({ type: DataType.STRING, allowNull: false })
     name!: string;
 
-    @Column({ type: DataType.ENUM(...Object.values(Specialty)), allowNull: false })
+    @Column({ type: DataType.STRING, allowNull: false, unique: true })
+    dni!: string;
+
+    @Column({ type: DataType.STRING })
+    email!: string;
+
+    @Column({ type: DataType.STRING })
+    phone!: string;
+
+    @Column({ type: DataType.STRING, defaultValue: 'activo' })
+    status!: string;
+
+    @Column({ type: DataType.INTEGER, defaultValue: 10, field: 'daily_quota' })
+    dailyQuota!: number;
+
+    @ForeignKey(() => Specialty)
+    @Column({ type: DataType.INTEGER, field: 'specialty_id' })
+    specialtyId!: number;
+
+    @BelongsTo(() => Specialty)
     specialty!: Specialty;
 
-    @Column({ type: DataType.BOOLEAN, defaultValue: true })
-    isAvailable!: boolean;
+    @ForeignKey(() => MedicalCenter)
+    @Column({ type: DataType.INTEGER, field: 'medical_center_id' })
+    medicalCenterId!: number;
+
+    @BelongsTo(() => MedicalCenter)
+    medicalCenter!: MedicalCenter;
 
     @HasMany(() => Appointment)
     appointments!: Appointment[];
 
-    @CreatedAt
-    createdAt!: Date;
-
-    @UpdatedAt
-    updatedAt!: Date;
+    @HasMany(() => DoctorSchedule)
+    schedules!: DoctorSchedule[];
 }
+

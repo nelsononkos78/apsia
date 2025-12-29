@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '../services/api';
 import { useToast } from "vue-toastification";
+import { websocketService } from '../services/websocket.service';
 
 const toast = useToast();
 const showSuccess = ref(false);
@@ -9,6 +10,49 @@ const showVerification = ref(false);
 const documentId = ref('');
 const loading = ref(false);
 const ticket = ref('');
+const showTable = ref(true);
+const todayAppointments = ref<any[]>([]);
+const selectedAppointment = ref<any>(null);
+const searchQuery = ref('');
+
+const filteredAppointments = computed(() => {
+  let filtered = todayAppointments.value;
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(app => 
+      app.contactName?.toLowerCase().includes(query) ||
+      app.doctor?.name?.toLowerCase().includes(query) ||
+      app.phoneNumber?.toLowerCase().includes(query) ||
+      app.serviceType?.name?.toLowerCase().includes(query) ||
+      app.patient?.name?.toLowerCase().includes(query) ||
+      app.patient?.documentNumber?.includes(query)
+    );
+  }
+
+  // Sort: SCHEDULED first (by dateTime), then CHECKED_IN (by checkinTime)
+  return [...filtered].sort((a, b) => {
+    // 1. Status priority: SCHEDULED (0) > CHECKED_IN (1)
+    const statusOrder = { 'SCHEDULED': 0, 'CHECKED_IN': 1 };
+    const aOrder = statusOrder[a.status as keyof typeof statusOrder] ?? 2;
+    const bOrder = statusOrder[b.status as keyof typeof statusOrder] ?? 2;
+
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder;
+    }
+
+    // 2. Time sorting within same status
+    if (a.status === 'SCHEDULED') {
+      return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+    } else if (a.status === 'CHECKED_IN') {
+      const aTime = a.checkinTime ? new Date(a.checkinTime).getTime() : 0;
+      const bTime = b.checkinTime ? new Date(b.checkinTime).getTime() : 0;
+      return aTime - bTime; // Oldest first (first to arrive)
+    }
+
+    return 0;
+  });
+});
 
 // Extracted data from document
 const extractedData = ref({
@@ -118,11 +162,12 @@ const processImageFile = async (file: File) => {
     const reader = new FileReader();
     
     reader.onload = async (e) => {
+      console.log('File read successfully, creating image object');
       try {
         const img = new Image();
-        img.src = e.target?.result as string;
         
         img.onload = async () => {
+          console.log('Image loaded successfully, dimensions:', img.width, 'x', img.height);
           // Create canvas for compression
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
@@ -167,24 +212,54 @@ const processImageFile = async (file: File) => {
             } else {
               toast.warning('No se pudo detectar la dirección en la imagen');
             }
+            showVerification.value = true;
           } else {
             // New scan mode: Validate ID
             if (!newData.documentId) {
               throw new Error('No se pudo detectar el número de documento. Intente nuevamente con una imagen más clara.');
             }
 
+            // Sanitize ID: remove any non-digit characters
+            const sanitizedId = newData.documentId.replace(/\D/g, '');
+            console.log('Document ID detected:', sanitizedId);
+
+            if (sanitizedId.length < 8) {
+               throw new Error(`Documento inválido detectado (${sanitizedId}). Intente nuevamente.`);
+            }
+
             extractedData.value = {
-              documentId: newData.documentId,
+              documentId: sanitizedId,
               fullName: newData.fullName,
               birthDate: newData.birthDate,
               sex: newData.sex,
               address: newData.address || ''
             };
+
+            // Auto-checkin flow - DISABLED per user request to see verification
+            // documentId.value = sanitizedId;
+            // toast.info(`Documento detectado: ${sanitizedId}. Verificando cita...`);
+            
+            // Close camera if open
+            stopCamera();
+            
+            // Show verification screen instead of auto-checkin
+            showVerification.value = true;
+            
+            // Proceed immediately to check-in
+            // console.log('Triggering auto-checkin for:', sanitizedId);
+            // await performCheckin();
           }
           
-          showVerification.value = true;
           isScanningBack.value = false;
         };
+
+        img.onerror = () => {
+          console.error('Image object failed to load');
+          toast.error('Error al cargar la imagen. El archivo podría estar corrupto.');
+          processingImage.value = false;
+        };
+
+        img.src = e.target?.result as string;
       } catch (error: any) {
         console.error('Vision AI error:', error);
         toast.error(error.response?.data?.error || error.message || 'Error al analizar la imagen');
@@ -209,6 +284,7 @@ const processImageFile = async (file: File) => {
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
+  console.log('File selected:', file ? `${file.name} (${file.type})` : 'none');
   
   if (file) {
     if (!file.type.startsWith('image/')) {
@@ -270,23 +346,43 @@ const capturePhoto = async () => {
         } else {
           toast.warning('No se pudo detectar la dirección en la imagen');
         }
+        showVerification.value = true;
       } else {
         // New scan mode: Validate ID
         if (!newData.documentId) {
           throw new Error('No se pudo detectar el número de documento. Intente nuevamente.');
         }
 
+        // Sanitize ID
+        const sanitizedId = newData.documentId.replace(/\D/g, '');
+        console.log('Document ID detected (Camera):', sanitizedId);
+
+        if (sanitizedId.length < 8) {
+            throw new Error(`Documento inválido detectado (${sanitizedId}). Intente nuevamente.`);
+        }
+
         extractedData.value = {
-          documentId: newData.documentId,
+          documentId: sanitizedId,
           fullName: newData.fullName,
           birthDate: newData.birthDate,
           sex: newData.sex,
           address: newData.address || ''
         };
+
+        // Auto-checkin flow - DISABLED per user request to see verification
+        // documentId.value = sanitizedId;
+        // toast.info(`Documento detectado: ${sanitizedId}. Verificando cita...`);
+        
+        stopCamera();
+        
+        // Show verification screen
+        showVerification.value = true;
+        
+        // Proceed immediately to check-in
+        // console.log('Triggering auto-checkin (Camera) for:', sanitizedId);
+        // await performCheckin();
       }
       
-      stopCamera();
-      showVerification.value = true;
       isScanningBack.value = false;
     }
   } catch (error: any) {
@@ -305,42 +401,66 @@ const performCheckin = async () => {
 
   loading.value = true;
   try {
-    // 1. Find Patient
+    // 1. Find or Create Patient
+    let patient = null;
     const resPatient = await api.get(`/patients?documentId=${documentId.value}`);
     
     if (resPatient.data.length === 0) {
-      toast.error('Paciente no encontrado. Por favor verifique su documento.');
-      loading.value = false;
-      return;
+      // If not found and we have extracted data, create patient
+      if (extractedData.value.fullName && extractedData.value.documentId === documentId.value) {
+        const newPatientRes = await api.post('/patients', {
+          name: extractedData.value.fullName,
+          dni: extractedData.value.documentId,
+          documentNumber: extractedData.value.documentId,
+          birthDate: extractedData.value.birthDate ? extractedData.value.birthDate.split('/').reverse().join('-') : null,
+          // Add other fields if needed
+        });
+        patient = newPatientRes.data;
+        toast.info('Nuevo paciente registrado automáticamente.');
+      } else {
+        toast.error('Paciente no encontrado. Por favor verifique su documento o escanee su ID.');
+        loading.value = false;
+        return;
+      }
+    } else {
+      patient = resPatient.data[0];
     }
-
-    const patient = resPatient.data[0];
     
     // 2. Find Today's Appointments
-    const today = new Date().toISOString().split('T')[0];
-    const resApps = await api.get(`/appointments?patientId=${patient.id}&date=${today}`);
-    const scheduledAppointments = resApps.data.filter((a: any) => a.status === 'SCHEDULED');
+    // If we have a selectedAppointment, we use that. 
+    // Otherwise, we look for appointments for this patient (but wait, new appointments don't have patientId yet!)
+    // So if no selectedAppointment, we search by contact name or phone? 
+    // Actually, the user flow is: select from table -> scan. So selectedAppointment should be set.
     
-    if (scheduledAppointments.length === 0) {
-      toast.warning('No tiene citas programadas para hoy o ya realizó el check-in.');
-      loading.value = false;
-      return;
+    let appointment = selectedAppointment.value;
+    
+    if (!appointment) {
+      // Fallback: search for appointments for today that match this patient's document (if already associated)
+      const today = new Date().toISOString().split('T')[0];
+      const resApps = await api.get(`/appointments?patientId=${patient.id}&date=${today}`);
+      const scheduledAppointments = resApps.data.filter((a: any) => a.status === 'SCHEDULED');
+      
+      if (scheduledAppointments.length === 0) {
+        toast.warning('No tiene citas programadas para hoy o ya realizó el check-in.');
+        loading.value = false;
+        return;
+      }
+      appointment = scheduledAppointments[0];
     }
-
-    // 3. Auto-select first scheduled appointment
-    const appointment = scheduledAppointments[0];
     
-    // 4. Perform Check-in
-    const resCheckin = await api.post(`/appointments/${appointment.id}/checkin`);
+    // 3. Perform Check-in with patient association
+    const resCheckin = await api.post(`/appointments/${appointment.id}/checkin`, {
+      patientId: patient.id
+    });
     ticket.value = resCheckin.data.ticketNumber;
     
     // Show success screen
     showSuccess.value = true;
     
-    // Auto-reset after 10 seconds
+    // Auto-reset after 5 seconds
     setTimeout(() => {
       reset();
-    }, 10000);
+    }, 5000);
     
   } catch (error: any) {
     console.error(error);
@@ -349,6 +469,57 @@ const performCheckin = async () => {
     loading.value = false;
   }
 };
+
+const fetchTodayAppointments = async () => {
+  loading.value = true;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const res = await api.get(`/appointments?date=${today}`);
+    // Show scheduled and checked-in appointments
+    todayAppointments.value = res.data.filter((a: any) => a.status === 'SCHEDULED' || a.status === 'CHECKED_IN');
+  } catch (error) {
+    console.error('Error fetching today appointments:', error);
+    toast.error('Error al cargar las citas de hoy');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const selectAppointment = (app: any) => {
+  selectedAppointment.value = app;
+  showTable.value = false;
+  // Pre-fill document ID if we want to be helpful, but user said "enviar al escaneo"
+  // documentId.value = app.patient?.documentNumber || '';
+};
+
+onMounted(() => {
+  fetchTodayAppointments();
+  
+  // Listen for new appointments via WebSocket
+  websocketService.on('appointment:updated', (appointment: any) => {
+    console.log('📅 New appointment received via WebSocket:', appointment);
+    
+    // Check if it's for today
+    const appointmentDate = new Date(appointment.dateTime).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (appointmentDate === today) {
+      // Check if appointment already exists in list
+      const existingIndex = todayAppointments.value.findIndex(a => a.id === appointment.id);
+      
+      if (existingIndex >= 0) {
+        // Update existing appointment
+        todayAppointments.value[existingIndex] = appointment;
+      } else {
+        // Add new appointment if it's SCHEDULED or CHECKED_IN
+        if (appointment.status === 'SCHEDULED' || appointment.status === 'CHECKED_IN') {
+          todayAppointments.value.push(appointment);
+          toast.success(`Nueva cita agregada: ${appointment.contactName}`);
+        }
+      }
+    }
+  });
+});
 
 const confirmAndCheckin = async () => {
   // Use extracted document ID for check-in
@@ -370,6 +541,9 @@ const reset = () => {
     address: ''
   };
   stopCamera();
+  showTable.value = true;
+  selectedAppointment.value = null;
+  fetchTodayAppointments();
 };
 
 const handleKeyPress = (e: KeyboardEvent) => {
@@ -396,13 +570,131 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <!-- Main Content -->
-    <div v-if="!showSuccess && !showVerification" class="flex-1 flex items-center justify-center p-8">
+    <!-- Main Content: Appointment Table -->
+    <div v-if="showTable && !showSuccess && !showVerification" class="flex-1 p-8 overflow-auto bg-gray-50/50">
+      <div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Citas para Hoy</h1>
+            <p class="text-lg text-gray-600">Busca tu nombre y selecciona tu cita para confirmar tu llegada.</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <input 
+                v-model="searchQuery"
+                type="text" 
+                placeholder="Buscar por nombre o DNI..." 
+                class="pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none w-64 md:w-80 shadow-sm"
+              />
+            </div>
+            <button @click="fetchTodayAppointments" class="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-all font-medium text-gray-700">
+              <span :class="{ 'animate-spin': loading }">🔄</span>
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading && todayAppointments.length === 0" class="flex flex-col items-center justify-center py-32 space-y-4">
+          <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent"></div>
+          <p class="text-gray-500 font-medium">Cargando citas...</p>
+        </div>
+
+        <div v-else-if="todayAppointments.length === 0" class="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-200 shadow-inner">
+          <div class="text-6xl mb-4">📅</div>
+          <p class="text-xl text-gray-400 font-medium">No hay citas programadas para hoy.</p>
+          <p class="text-gray-400 text-sm mt-1">Si crees que esto es un error, por favor consulta en recepción.</p>
+        </div>
+
+        <div v-else class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-gray-50/50 border-b border-gray-100">
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Hora</th>
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Paciente</th>
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Contacto</th>
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Servicio</th>
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Médico</th>
+                  <th class="px-3 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr 
+                  v-for="app in filteredAppointments" 
+                  :key="app.id"
+                  class="hover:bg-gray-50/50 transition-colors group"
+                >
+                  <td class="px-3 py-3 whitespace-nowrap">
+                    <div v-if="app.status === 'CHECKED_IN' && app.checkinTime" class="flex items-center gap-1 text-primary font-bold text-sm">
+                      <span>🕒</span>
+                      {{ new Date(app.checkinTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                    </div>
+                    <div v-else-if="app.status === 'SCHEDULED'" class="flex items-center gap-1 text-gray-400 text-sm">
+                      <span>📅</span>
+                      <span class="text-xs italic">Pendiente</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 whitespace-nowrap">
+                    <div v-if="app.status === 'CHECKED_IN'" class="font-bold text-gray-900 text-sm">{{ app.patient?.name }}</div>
+                    <div v-else class="text-gray-400 italic text-xs">Pendiente</div>
+                  </td>
+                  <td class="px-3 py-3 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-gray-900 text-sm">{{ app.contactName }}</span>
+                      <span class="text-xs text-gray-400 font-mono">({{ app.phoneNumber }})</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                      <span class="text-base">{{ app.serviceType?.icon || '🏥' }}</span>
+                      <span class="text-sm font-semibold text-gray-700">{{ app.serviceType?.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-800">{{ app.doctor?.name || 'Por asignar' }}</div>
+                  </td>
+                  <td class="px-3 py-3 text-right whitespace-nowrap">
+                    <button 
+                      v-if="app.status === 'SCHEDULED'"
+                      @click="selectAppointment(app)"
+                      class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold transition-all text-xs whitespace-nowrap"
+                    >
+                      Check-in →
+                    </button>
+                    <div v-else-if="app.status === 'CHECKED_IN'" class="inline-block px-3 py-1.5 bg-orange-100 text-orange-600 rounded-lg font-bold text-xs">
+                      Checked in
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="filteredAppointments.length === 0">
+                  <td colspan="6" class="px-6 py-12 text-center text-gray-400 italic">
+                    No se encontraron citas que coincidan con "{{ searchQuery }}"
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content: Scanning (Step 2) -->
+    <div v-if="!showTable && !showSuccess && !showVerification" class="flex-1 flex items-center justify-center p-8 bg-white">
       <div class="max-w-2xl w-full text-center space-y-12 animate-fade-in">
+        <div class="flex justify-start">
+          <button @click="showTable = true" class="group flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-primary transition-colors font-medium">
+            <span class="group-hover:-translate-x-1 transition-transform">←</span>
+            Volver a la lista de citas
+          </button>
+        </div>
         <!-- Title -->
         <div>
-          <h1 class="text-5xl font-bold text-gray-900 mb-4">Bienvenido a Onkos</h1>
-          <p class="text-xl text-gray-600">Haz clic en la credencial para escanear tu documento</p>
+          <div class="inline-block p-4 bg-primary/10 rounded-3xl mb-6">
+            <span class="text-4xl">🆔</span>
+          </div>
+          <h1 class="text-5xl font-bold text-gray-900 mb-4">Confirmar Identidad</h1>
+          <p class="text-xl text-gray-600">Hola <strong>{{ selectedAppointment?.contactName }}</strong>, por favor escanea tu documento para confirmar tu llegada.</p>
         </div>
 
         <!-- ID Card Icon - CLICKABLE -->
@@ -609,8 +901,8 @@ onUnmounted(() => {
         <!-- Auto-reset message -->
         <div class="text-sm text-gray-500">
           <p>Esta pantalla se reiniciará automáticamente en unos segundos...</p>
-          <button @click="reset" class="mt-4 text-primary hover:underline">
-            Realizar otro check-in
+          <button @click="reset" class="mt-4 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-md">
+            Finalizar y Volver a la Lista
           </button>
         </div>
       </div>
@@ -664,6 +956,14 @@ onUnmounted(() => {
             <span class="text-2xl">🤖</span>
             Capturar y Analizar
           </span>
+        </button>
+
+        <button 
+          @click="openFileSelector"
+          :disabled="processingImage"
+          class="w-full mt-4 bg-gray-800 text-white py-4 text-lg font-semibold rounded-2xl hover:bg-gray-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 border border-gray-700"
+        >
+          <span>📂</span> Subir desde archivo
         </button>
       </div>
 

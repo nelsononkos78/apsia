@@ -37,7 +37,19 @@ export const useMonitoringStore = defineStore('monitoring', () => {
     );
 
     const waitingPatients = computed(() =>
-        waitingRoom.value.filter(w => w.status === 'ESPERANDO')
+        [...waitingRoom.value]
+            .filter(w => w.status === 'ESPERANDO')
+            .sort((a, b) => {
+                // Priority: URGENTE (1) > NORMAL (0)
+                const priorityOrder: Record<string, number> = { 'URGENTE': 1, 'NORMAL': 0 };
+                const aPrio = priorityOrder[a.priority] || 0;
+                const bPrio = priorityOrder[b.priority] || 0;
+
+                if (aPrio !== bPrio) return bPrio - aPrio;
+
+                // Time: Oldest first
+                return new Date(a.checkInTime).getTime() - new Date(b.checkInTime).getTime();
+            })
     );
 
     const urgentPatients = computed(() =>
@@ -72,7 +84,12 @@ export const useMonitoringStore = defineStore('monitoring', () => {
     }
 
     function addToWaitingRoom(newRecord: WaitingRoomRecord) {
-        waitingRoom.value.push(newRecord);
+        const exists = waitingRoom.value.some(w => w.id === newRecord.id);
+        if (!exists) {
+            waitingRoom.value.push(newRecord);
+        } else {
+            updateWaitingRoomRecord(newRecord);
+        }
     }
 
     function removeFromWaitingRoom(id: number) {
@@ -85,6 +102,17 @@ export const useMonitoringStore = defineStore('monitoring', () => {
 
     function setDailyStatistics(stats: any) {
         dailyStatistics.value = stats;
+    }
+
+    function updateAppointment(appointment: any) {
+        if (dailyStatistics.value && dailyStatistics.value.appointments && dailyStatistics.value.appointments.list) {
+            const index = dailyStatistics.value.appointments.list.findIndex((a: any) => a.id === appointment.id);
+            if (index !== -1) {
+                dailyStatistics.value.appointments.list[index] = appointment;
+            } else {
+                dailyStatistics.value.appointments.list.push(appointment);
+            }
+        }
     }
 
     function setLoading(loading: boolean) {
@@ -119,6 +147,7 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         removeFromWaitingRoom,
         setSelectedDate,
         setDailyStatistics,
+        updateAppointment,
         setLoading
     };
 });
