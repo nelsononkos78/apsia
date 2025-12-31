@@ -44,12 +44,25 @@ export class DoctorService {
                 {
                     model: Appointment,
                     where: {
-                        [Op.or]: [
-                            { doctorId: doctor.id },
-                            { doctorId: null } // Include unassigned if any
+                        [Op.and]: [
+                            {
+                                [Op.or]: [
+                                    { doctorId: doctor.id },
+                                    { doctorId: null }
+                                ]
+                            },
+                            {
+                                [Op.or]: [
+                                    // Patients with follow-up or other types don't need triaje
+                                    { '$appointment.serviceType.code$': { [Op.ne]: 'CONSULTATION_NEW' } },
+                                    // New patients must have triaje completed
+                                    { triajeCompleted: true }
+                                ]
+                            }
                         ]
                     },
-                    required: true // Only those with appointments
+                    include: [{ model: ServiceType, as: 'serviceType' }],
+                    required: true
                 }
             ],
             order: [['priority', 'DESC'], ['checkInTime', 'ASC']]
@@ -122,10 +135,22 @@ export class DoctorService {
 
             // Set this item as current
             await Queue.update({ isCurrent: true }, { where: { appointmentId: waitingRoomEntry.appointmentId } });
+
+            // Link appointment to resource
+            await Appointment.update(
+                { resourceId: resource.id },
+                { where: { id: waitingRoomEntry.appointmentId } }
+            );
+
+            // Update the instance in memory so the emitted JSON has the resourceId
+            if (waitingRoomEntry.appointment) {
+                waitingRoomEntry.appointment.resourceId = resource.id;
+            }
         }
 
         // Update Resource
         resource.currentPatientId = waitingRoomEntry.patientId;
+        resource.currentAppointmentId = waitingRoomEntry.appointmentId;
         resource.currentOccupancy = 1;
         resource.status = ResourceStatus.OCUPADO;
         await resource.save();
@@ -165,13 +190,28 @@ export class DoctorService {
     }
 
     async startConsultation(doctorId: number, appointmentId: number) {
-        const appointment = await Appointment.findByPk(appointmentId);
+        const appointment = await Appointment.findByPk(appointmentId, {
+            include: [
+                { model: Patient, as: 'patient' },
+                { model: Doctor, as: 'doctor' },
+                { model: ServiceType, as: 'serviceType' }
+            ]
+        });
         if (!appointment) {
             throw new Error('Appointment not found');
         }
 
         appointment.status = AppointmentStatus.IN_PROGRESS;
         appointment.startTime = new Date();
+
+        // Ensure resourceId is set if not already
+        if (!appointment.resourceId) {
+            const resource = await Resource.findOne({ where: { doctorId } });
+            if (resource) {
+                appointment.resourceId = resource.id;
+            }
+        }
+
         await appointment.save();
 
         // Update waiting room to ATENDIDO if linked
@@ -180,6 +220,29 @@ export class DoctorService {
             waitingEntry.status = WaitingRoomStatus.ATENDIDO;
             await waitingEntry.save();
             getWebSocketService().emitWaitingRoomUpdate(waitingEntry.toJSON());
+        }
+
+        // Update resource status if linked
+        if (appointment.resourceId) {
+            const resource = await Resource.findByPk(appointment.resourceId);
+            if (resource) {
+                resource.status = ResourceStatus.OCUPADO;
+                resource.currentPatientId = appointment.patientId;
+                resource.doctorId = appointment.doctorId;
+                resource.currentOccupancy = 1;
+                await resource.save();
+
+                // Emit resource update with associations
+                const resourceWithAssoc = await Resource.findByPk(resource.id, {
+                    include: [
+                        { model: Patient, as: 'currentPatient' },
+                        { model: Doctor, as: 'doctor' }
+                    ]
+                });
+                if (resourceWithAssoc) {
+                    getWebSocketService().emitResourceUpdate(resourceWithAssoc.toJSON());
+                }
+            }
         }
 
         getWebSocketService().emitAppointmentUpdate(appointment.toJSON());

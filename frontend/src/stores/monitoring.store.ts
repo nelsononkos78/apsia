@@ -24,6 +24,10 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         resources.value.filter(r => r.type === 'ESTANCIA')
     );
 
+    const triajeResources = computed(() =>
+        resources.value.filter(r => r.type === 'TRIAJE')
+    );
+
     const availableResources = computed(() =>
         resources.value.filter(r => r.status === 'DISPONIBLE')
     );
@@ -131,6 +135,7 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         consultorios,
         tratamientos,
         estancias,
+        triajeResources,
         availableResources,
         occupiedResources,
         disabledResources,

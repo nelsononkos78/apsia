@@ -1,39 +1,35 @@
 <template>
     <div class="doctor-dashboard">
+        <GlobalHeader fullWidth>
+            <template #center>
+                <DigitalClock />
+            </template>
+            <template #actions>
+                <div class="header-actions-wrapper">
+                    <div v-if="resource" class="resource-badge">
+                        <i class="fas fa-door-open"></i>
+                        {{ resource.name }}
+                    </div>
+                </div>
+            </template>
+        </GlobalHeader>
+
         <header class="dashboard-header">
             <div class="header-content">
                 <div class="brand">
-                    <div class="logo-icon">I</div>
-                    <h1>Panel Médico</h1>
-                </div>
-                <div v-if="doctor" class="doctor-info">
-                    <span class="doctor-name">{{ doctor.name }}</span>
-                    <span class="specialty">{{ doctor.specialty?.name }}</span>
-                </div>
-            </div>
-            
-            <div class="header-center">
-                <div class="clock-container">
-                    <div class="date-box">
-                        <i class="far fa-calendar-alt"></i>
-                        <span>{{ currentDate }}</span>
+                    <div class="logo-icon">
+                        <i class="fas fa-user-md"></i>
                     </div>
-                    <div class="time-box">
-                        {{ currentTime }}
+                    <div class="doctor-info">
+                        <span class="doctor-name">{{ doctor?.name }}</span>
+                        <span class="specialty">{{ doctor?.specialty?.name }}</span>
                     </div>
                 </div>
             </div>
-
-            <div class="header-actions">
-                <div v-if="resource" class="resource-badge">
-                    <i class="fas fa-door-open"></i>
-                    {{ resource.name }}
-                </div>
-                <button @click="logout" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Salir
-                </button>
-            </div>
+            <button @click="logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i>
+                Salir
+            </button>
         </header>
 
         <main class="dashboard-main">
@@ -81,7 +77,7 @@
                             </div>
                             <div class="info-cell hc">
                                 <label>HISTORIA CLÍNICA:</label>
-                                <input type="text" placeholder="Ingresar HC..." class="hc-input" />
+                                <span>{{ currentPatient.medicalRecordNumber || 'Sin asignar' }}</span>
                             </div>
                         </div>
 
@@ -181,6 +177,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { websocketService } from '../services/websocket.service';
+import DigitalClock from '../components/monitoring/DigitalClock.vue';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const router = useRouter();
 
@@ -196,7 +194,6 @@ const currentTime = ref('');
 const currentDate = ref('');
 const consultationSeconds = ref(0);
 const consultationTimer = ref<number | null>(null);
-let clockInterval: number | null = null;
 
 const TABS = ['ANAMNESIS', 'EXAMEN FISICO', 'EVOLUCION', 'INTERCONSULTA', 'Nº EMERGENCIA'];
 const activeTab = ref(TABS[0]);
@@ -230,18 +227,7 @@ const isOverTiming = computed(() => {
     return consultationSeconds.value >= timingInSeconds;
 });
 
-function updateClock() {
-    const now = new Date();
-    currentTime.value = now.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-    currentDate.value = now.toLocaleDateString('es-ES', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
-    });
-}
+
 
 function startTimer() {
     if (consultationTimer.value) return;
@@ -382,8 +368,6 @@ function handleWaitingRoomUpdate() {
 }
 
 onMounted(() => {
-    updateClock();
-    clockInterval = window.setInterval(updateClock, 1000);
     loadDashboard();
     
     // Ensure we are in the monitoring room for real-time updates
@@ -396,7 +380,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    if (clockInterval) clearInterval(clockInterval);
     stopTimer();
 
     // Remove WebSocket listeners
@@ -409,19 +392,19 @@ onUnmounted(() => {
 <style scoped>
 .doctor-dashboard {
     min-height: 100vh;
-    background: #f0f2f5;
+    background: #FCFCFC;
     display: flex;
     flex-direction: column;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .dashboard-header {
-    background: #ffffff;
+    background: #FCFCFC;
     padding: 0.75rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(34, 54, 117, 0.08);
     z-index: 100;
 }
 
@@ -435,7 +418,7 @@ onUnmounted(() => {
 .logo-icon {
     width: 32px;
     height: 32px;
-    background: #3498db;
+    background: #5371C4;
     color: white;
     border-radius: 8px;
     display: flex;
@@ -448,7 +431,7 @@ onUnmounted(() => {
 .header-content h1 {
     margin: 0;
     font-size: 1.25rem;
-    color: #2c3e50;
+    color: #223675;
     font-weight: 800;
     letter-spacing: -0.5px;
 }
@@ -461,13 +444,13 @@ onUnmounted(() => {
 
 .doctor-name {
     font-weight: 700;
-    color: #34495e;
+    color: #223675;
     font-size: 0.95rem;
 }
 
 .specialty {
     font-size: 0.8rem;
-    color: #95a5a6;
+    color: #5371C4;
     font-weight: 500;
 }
 
@@ -481,10 +464,10 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    background: #1a202c;
+    background: #223675;
     padding: 0.5rem 1rem;
     border-radius: 16px;
-    border: 1px solid #2d3748;
+    border: 1px solid #5371C4;
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -492,7 +475,7 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: #a0aec0;
+    color: #C3E1ED;
     font-size: 1.1rem;
     font-weight: 500;
 }
@@ -511,14 +494,14 @@ onUnmounted(() => {
 }
 
 .time-box {
-    background: #2d3748;
+    background: #5371C4;
     color: white;
     padding: 0.4rem 1.2rem;
     border-radius: 12px;
     font-size: 1.8rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    border: 1px solid #4a5568;
+    border: 1px solid #C3E1ED;
 }
 
 .header-actions {
@@ -528,16 +511,16 @@ onUnmounted(() => {
 }
 
 .resource-badge {
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
+    background: #CEEAC7;
+    color: #223675;
+    padding: 6px 16px;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    border: 1px solid #bbdefb;
+    gap: 8px;
+    border: 1px solid #A5D8A9;
 }
 
 .btn-logout {
@@ -602,13 +585,13 @@ onUnmounted(() => {
 .card-header-row h2 {
     margin: 0;
     font-size: 1.4rem;
-    color: #1a202c;
+    color: #223675;
     font-weight: 800;
 }
 
 .timer-badge {
-    background: #f0fff4;
-    color: #2f855a;
+    background: #CEEAC7;
+    color: #223675;
     padding: 0.4rem 1rem;
     border-radius: 30px;
     font-weight: 800;
@@ -616,14 +599,14 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border: 2px solid #9ae6b4;
+    border: 2px solid #A5D8A9;
     transition: all 0.3s ease;
 }
 
 .timer-badge.over-timing {
-    background: #fff5f5;
-    color: #c53030;
-    border-color: #feb2b2;
+    background: #fee2e2;
+    color: #e74c3c;
+    border-color: #fecaca;
     animation: pulse 2s infinite;
 }
 
@@ -646,12 +629,12 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-    background: #3498db;
-    color: white;
+    background: #CEEAC7;
+    color: #223675;
 }
 
 .btn-success {
-    background: #2ecc71;
+    background: #5371C4;
     color: white;
 }
 
@@ -695,14 +678,14 @@ onUnmounted(() => {
 .info-cell label {
     font-size: 0.7rem;
     font-weight: 800;
-    color: #718096;
+    color: #5371C4;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .info-cell span {
     font-weight: 700;
-    color: #2d3748;
+    color: #223675;
     font-size: 1.1rem;
 }
 
@@ -717,23 +700,24 @@ onUnmounted(() => {
 }
 
 .description-box {
-    background: #f7fafc;
+    background: #FCFCFC;
     padding: 1rem;
     border-radius: 8px;
-    border-left: 4px solid #3498db;
+    border-left: 4px solid #5371C4;
+    border: 1px solid rgba(34, 54, 117, 0.08);
 }
 
 .description-box label {
     display: block;
     font-size: 0.8rem;
     font-weight: 700;
-    color: #4a5568;
+    color: #5371C4;
     margin-bottom: 0.5rem;
 }
 
 .description-box p {
     margin: 0;
-    color: #2d3748;
+    color: #223675;
     line-height: 1.5;
 }
 
@@ -759,7 +743,7 @@ onUnmounted(() => {
     background: none;
     font-weight: 700;
     font-size: 0.85rem;
-    color: #718096;
+    color: #5371C4;
     cursor: pointer;
     transition: all 0.2s;
     border-bottom: 3px solid transparent;
@@ -771,8 +755,8 @@ onUnmounted(() => {
 }
 
 .tab-btn.active {
-    color: #3498db;
-    border-bottom-color: #3498db;
+    color: #223675;
+    border-bottom-color: #223675;
     background: white;
 }
 
@@ -804,9 +788,9 @@ onUnmounted(() => {
 
 .btn-ai {
     align-self: flex-end;
-    background: #ebf8ff;
-    color: #2b6cb0;
-    border: 1px solid #bee3f8;
+    background: #C3E1ED;
+    color: #223675;
+    border: 1px solid #5371C4;
     padding: 0.6rem 1.2rem;
     border-radius: 8px;
     font-weight: 700;
@@ -819,7 +803,8 @@ onUnmounted(() => {
 }
 
 .btn-ai:hover {
-    background: #bee3f8;
+    background: #5371C4;
+    color: white;
     transform: translateY(-1px);
 }
 
@@ -849,7 +834,7 @@ onUnmounted(() => {
 .list-header h2 {
     margin: 0;
     font-size: 1.2rem;
-    color: #2d3748;
+    color: #223675;
     font-weight: 800;
 }
 
@@ -869,13 +854,13 @@ onUnmounted(() => {
 }
 
 .badge-waiting {
-    background: #e53e3e;
+    background: #5371C4;
     color: white;
 }
 
 .badge-attended {
-    background: #2ecc71;
-    color: white;
+    background: #CEEAC7;
+    color: #223675;
 }
 
 .waiting-list {
@@ -891,15 +876,15 @@ onUnmounted(() => {
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: #f8fafc;
+    background: #FCFCFC;
     border-radius: 12px;
-    border: 1px solid #edf2f7;
+    border: 1px solid rgba(34, 54, 117, 0.08);
     transition: all 0.2s;
 }
 
 .waiting-item:hover {
-    border-color: #cbd5e0;
-    background: #f1f5f9;
+    border-color: #5371C4;
+    background: #C3E1ED;
     transform: translateX(4px);
 }
 
@@ -911,19 +896,19 @@ onUnmounted(() => {
 
 .ticket {
     font-weight: 800;
-    color: #3498db;
+    color: #5371C4;
     font-size: 0.85rem;
 }
 
 .name {
     font-weight: 700;
-    color: #2d3748;
+    color: #223675;
     font-size: 1rem;
 }
 
 .time {
     font-size: 0.75rem;
-    color: #718096;
+    color: #5371C4;
     display: flex;
     align-items: center;
     gap: 0.3rem;
@@ -936,8 +921,8 @@ onUnmounted(() => {
     border: none;
     border-radius: 12px;
     background: white;
-    color: #3498db;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    color: #5371C4;
+    box-shadow: 0 2px 8px rgba(34, 54, 117, 0.08);
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
@@ -947,7 +932,7 @@ onUnmounted(() => {
 }
 
 .btn-call:hover:not(:disabled) {
-    background: #3498db;
+    background: #5371C4;
     color: white;
     transform: scale(1.05);
 }

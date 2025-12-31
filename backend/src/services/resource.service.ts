@@ -2,6 +2,7 @@ import { Resource, ResourceStatus, ResourceType, InhabilitadoReason } from '../m
 import { Patient } from '../models/patient.model';
 import { Doctor } from '../models/doctor.model';
 import { DoctorSchedule } from '../models/doctor-schedule.model';
+import { Appointment } from '../models/appointment.model';
 import { Op } from 'sequelize';
 import { getWebSocketService } from './websocket.service';
 
@@ -176,6 +177,15 @@ export class ResourceService {
         resource.currentOccupancy = 0;
         resource.status = ResourceStatus.DISPONIBLE;
 
+        // If it's a Triaje resource, mark the appointment as triajeCompleted
+        if (resource.type === ResourceType.TRIAJE && resource.currentAppointmentId) {
+            await Appointment.update(
+                { triajeCompleted: true },
+                { where: { id: resource.currentAppointmentId } }
+            );
+        }
+
+        resource.currentAppointmentId = null;
         await resource.save();
 
         // Emit WebSocket event
@@ -236,6 +246,12 @@ export class ResourceService {
                     inhabilitados: 0
                 },
                 ESTANCIA: {
+                    total: 0,
+                    disponibles: 0,
+                    ocupados: 0,
+                    inhabilitados: 0
+                },
+                TRIAJE: {
                     total: 0,
                     disponibles: 0,
                     ocupados: 0,

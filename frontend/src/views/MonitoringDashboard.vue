@@ -1,5 +1,19 @@
 <template>
     <div class="monitoring-dashboard-modern">
+        <GlobalHeader fullWidth>
+            <template #center>
+                <DigitalClock />
+            </template>
+            <template #actions>
+                <div class="header-actions-wrapper">
+                    <div class="connection-indicator" :class="{ connected: isConnected }">
+                        <i :class="isConnected ? 'fas fa-circle' : 'fas fa-circle-notch fa-spin'"></i>
+                        <span>{{ isConnected ? 'Conectado' : 'Conectando...' }}</span>
+                    </div>
+                </div>
+            </template>
+        </GlobalHeader>
+
         <div class="dashboard-container">
             <!-- Sidebar izquierdo: Sala de Espera + Calendario -->
             <aside class="sidebar-left">
@@ -13,27 +27,12 @@
 
             <!-- Área principal: Recursos -->
             <main class="main-content">
-                <header class="content-header">
-                    <div class="header-left">
-                        <h1>Panel de Monitoreo</h1>
-                        <p class="subtitle">{{ currentDateDisplay }}</p>
-                    </div>
-                    <div class="header-center">
-                        <DigitalClock />
-                        <div class="time-selector">
-                            <select v-model="selectedHour" class="hour-select">
-                                <option :value="null">Tiempo Real</option>
-                                <option v-for="h in hours" :key="h" :value="h">{{ h }}:00</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="connection-indicator" :class="{ connected: isConnected }">
-                        <i :class="isConnected ? 'fas fa-circle' : 'fas fa-circle-notch fa-spin'"></i>
-                        <span>{{ isConnected ? 'Conectado' : 'Conectando...' }}</span>
-                    </div>
-                </header>
-
                 <div class="resources-container">
+                    <ResourceGrid 
+                        type="TRIAJE"
+                        :resources="triajeResources"
+                        :resourceDetails="resourceDetails"
+                    />
                     <ResourceGrid 
                         type="CONSULTORIO"
                         :resources="consultorios"
@@ -68,9 +67,18 @@ import CalendarPanel from '../components/monitoring/CalendarPanel.vue';
 import ResourceGrid from '../components/monitoring/ResourceGrid.vue';
 import DigitalClock from '../components/monitoring/DigitalClock.vue';
 import { websocketService } from '../services/websocket.service';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const monitoringStore = useMonitoringStore();
-const { consultorios, tratamientos, estancias, selectedDate, dailyStatistics } = storeToRefs(monitoringStore);
+const { 
+    consultorios, 
+    tratamientos, 
+    estancias,
+    triajeResources,
+    waitingPatients,
+    selectedDate,
+    dailyStatistics
+} = storeToRefs(monitoringStore);
 
 const isConnected = ref(true);
 const selectedHour = ref<number | null>(null);
@@ -87,7 +95,7 @@ const currentDateDisplay = computed(() => {
 });
 
 const resourceDetails = computed(() => {
-    const details: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string }> = {};
+    const details: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string; appointment?: any }> = {};
     
     let relevantAppointments = [];
 
@@ -109,7 +117,8 @@ const resourceDetails = computed(() => {
             details[apt.resourceId] = {
                 doctorName: apt.doctor ? `Dr. ${apt.doctor.name.split(' ')[0]}` : undefined,
                 patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : undefined,
-                treatmentInfo: apt.serviceType
+                treatmentInfo: apt.serviceType?.name || apt.serviceType,
+                appointment: apt
             };
         }
     });
@@ -195,8 +204,14 @@ onMounted(async () => {
 <style scoped>
 .monitoring-dashboard-modern {
     min-height: 100vh;
-    background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
+    background: #FCFCFC;
     padding: 0;
+}
+
+.header-actions-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .dashboard-container {
@@ -207,13 +222,13 @@ onMounted(async () => {
 }
 
 .sidebar-left {
-    background: #f5f7fa;
+    background: #FCFCFC;
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding: 16px;
     overflow-y: auto;
-    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    border-right: 1px solid rgba(34, 54, 117, 0.08);
 }
 
 .sidebar-section {
@@ -237,26 +252,26 @@ onMounted(async () => {
 }
 
 .content-header {
-    background: white;
+    background: #FCFCFC;
     padding: 24px 32px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(34, 54, 117, 0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 3px rgba(34, 54, 117, 0.04);
 }
 
 .header-left h1 {
     margin: 0 0 4px 0;
     font-size: 24px;
     font-weight: 700;
-    color: #263238;
+    color: #223675;
 }
 
 .subtitle {
     margin: 0;
     font-size: 13px;
-    color: #78909c;
+    color: #5371C4;
     text-transform: capitalize;
 }
 
@@ -282,17 +297,19 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 6px 16px;
+    border-radius: 12px;
     background: #ffebee;
     color: #c62828;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 700;
+    border: 1px solid rgba(198, 40, 40, 0.1);
 }
 
 .connection-indicator.connected {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: #CEEAC7;
+    color: #223675;
+    border: 1px solid #A5D8A9;
 }
 
 .connection-indicator i {

@@ -1,5 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-100 p-6">
+  <div class="min-h-screen bg-gray-100">
+    <GlobalHeader />
+    <div class="p-6">
     <h1 class="text-3xl font-bold mb-6 text-gray-800">Gestión de Flujos Internos</h1>
 
     <div class="bg-white rounded-lg shadow p-4 mb-6">
@@ -85,12 +87,13 @@
     <div class="bg-gray-800 text-white p-4 rounded-lg shadow h-48 overflow-y-auto font-mono text-sm">
       <div v-for="(log, index) in logs" :key="index">> {{ log }}</div>
     </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
-import axios from 'axios';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const activeTab = ref('doctor');
 const logs = ref<string[]>([]);

@@ -97,6 +97,9 @@ export class Appointment extends Model {
     @Column({ type: DataType.STRING })
     emergencyContact!: string;
 
+    @Column({ type: DataType.BOOLEAN, defaultValue: false })
+    triajeCompleted!: boolean;
+
     @HasOne(() => Queue)
     queue!: Queue;
 

@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const router = useRouter();
 const email = ref('');
@@ -39,7 +40,9 @@ const login = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-100">
+  <div class="min-h-screen flex flex-col bg-slate-100">
+    <GlobalHeader />
+    <div class="flex-1 flex items-center justify-center">
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full border border-slate-200">
       <div class="text-center mb-8">
         <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
@@ -108,6 +111,7 @@ const login = async () => {
       </div>
     </div>
   </div>
+</div>
 </template>
 
 <style scoped>

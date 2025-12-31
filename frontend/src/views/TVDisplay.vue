@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import api from '../services/api';
 import { websocketService } from '../services/websocket.service';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
+import logo3 from '../assets/logo3.png';
 
 interface CurrentCall {
   ticket: string;
@@ -186,9 +188,6 @@ onUnmounted(() => {
   if (clockTimer) clearTimeout(clockTimer);
   websocketService.off('tv:state-updated', handleTvUpdate);
   websocketService.off('tv:call', handleTvCall);
-  if (player) {
-    player.destroy();
-  }
 });
 </script>
 
@@ -196,22 +195,20 @@ onUnmounted(() => {
   <div class="h-screen w-screen bg-gray-900 text-white p-[2vmin] flex flex-col gap-[2vmin] overflow-hidden">
     
     <!-- Header / Top Bar (Solid & Elegant) -->
-    <div class="flex-none h-[10vh] flex justify-between items-center px-[3vmin] bg-gray-800 rounded-2xl border-2 border-gray-700 shadow-lg">
-      <div class="flex items-center gap-[2vmin]">
-        <div class="w-[6vmin] h-[6vmin] bg-primary rounded-xl flex items-center justify-center font-black text-[3vmin] shadow-lg">I</div>
-        <span class="text-[3.5vmin] font-black text-gray-100 tracking-tight">Instituto Oncológico</span>
-      </div>
-      <div class="flex items-center gap-[4vmin]">
-        <button @click="playNotificationSound" class="opacity-0 hover:opacity-100 text-[1vmin] bg-gray-700 p-1 rounded">Test Sound</button>
-        <div class="flex items-center gap-[1.5vmin] text-gray-400 text-[2.5vmin] font-medium">
-          <i class="far fa-calendar-alt"></i>
-          <span>{{ currentDate }}</span>
+    <GlobalHeader :logo="logo3" hideTitle dark logoHeight="60px" fullWidth>
+      <template #actions>
+        <div class="flex items-center gap-[4vmin]">
+          <button @click="playNotificationSound" class="opacity-0 hover:opacity-100 text-[1vmin] bg-gray-700 p-1 rounded">Test Sound</button>
+          <div class="flex items-center gap-[1.5vmin] text-gray-400 text-[2.5vmin] font-medium">
+            <i class="far fa-calendar-alt"></i>
+            <span>{{ currentDate }}</span>
+          </div>
+          <div class="text-[4vmin] font-black text-white bg-gray-900 px-[3vmin] py-[0.5vmin] rounded-xl border-2 border-gray-700 shadow-inner">
+            {{ currentTime }}
+          </div>
         </div>
-        <div class="text-[4vmin] font-black text-white bg-gray-900 px-[3vmin] py-[0.5vmin] rounded-xl border-2 border-gray-700 shadow-inner">
-          {{ currentTime }}
-        </div>
-      </div>
-    </div>
+      </template>
+    </GlobalHeader>
 
     <!-- Main Content Grid -->
     <div class="flex-1 flex flex-col gap-[2vmin] min-h-0">

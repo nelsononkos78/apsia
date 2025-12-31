@@ -21,16 +21,11 @@
                     'other-month': !day.isCurrentMonth,
                     'selected': isSelected(day.date),
                     'today': isToday(day.date),
-                    'high-occupancy': day.occupancyLevel === 'high',
-                    'medium-occupancy': day.occupancyLevel === 'medium',
                     'has-appointments': day.appointmentCount > 0
                 }]"
-                @click="selectDate(day.date)"
+                @click="handleDayClick(day)"
             >
                 <div class="day-number">{{ day.date.getDate() }}</div>
-                <div v-if="day.appointmentCount > 0" class="appointment-count">
-                    {{ day.appointmentCount }}
-                </div>
             </div>
         </div>
 
@@ -40,22 +35,27 @@
                 <span>Hoy</span>
             </div>
             <div class="legend-item">
-                <span class="indicator medium-indicator"></span>
-                <span>Media ocupación</span>
-            </div>
-            <div class="legend-item">
-                <span class="indicator high-indicator"></span>
-                <span>Alta ocupación</span>
+                <span class="indicator has-appointments-indicator"></span>
+                <span>Con citas</span>
             </div>
         </div>
+        
+        <AppointmentDetailsModal 
+            v-if="showModal && selectedDayAppointments.length > 0"
+            :date="modalDate"
+            :appointments="selectedDayAppointments"
+            @close="showModal = false"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useMonitoringStore } from '../../stores/monitoring.store';
+import { websocketService } from '../../services/websocket.service';
 import api from '../../services/api';
+import AppointmentDetailsModal from './AppointmentDetailsModal.vue';
 
 const monitoringStore = useMonitoringStore();
 const { selectedDate } = storeToRefs(monitoringStore);
@@ -63,7 +63,10 @@ const { selectedDate } = storeToRefs(monitoringStore);
 const currentMonth = ref(new Date());
 const weekdays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-const occupancyData = ref<Record<string, { count: number; level: string }>>({});
+const occupancyData = ref<Record<string, { count: number; level: string; appointments: any[] }>>({});
+const showModal = ref(false);
+const modalDate = ref(new Date());
+const selectedDayAppointments = ref<any[]>([]);
 
 const currentMonthName = computed(() => {
     return currentMonth.value.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -94,7 +97,7 @@ const calendarDays = computed((): CalendarDay[] => {
     
     while (current <= endDate) {
         const dateKey = current.toISOString().split('T')[0];
-        const occupancy = occupancyData.value[dateKey] || { count: 0, level: 'low' };
+        const occupancy = occupancyData.value[dateKey] || { count: 0, level: 'low', appointments: [] };
         
         days.push({
             date: new Date(current),
@@ -119,6 +122,19 @@ function nextMonth() {
     loadAppointmentCounts();
 }
 
+function handleDayClick(day: CalendarDay) {
+    if (day.appointmentCount > 0) {
+        const dateKey = day.date.toISOString().split('T')[0];
+        const dayData = occupancyData.value[dateKey];
+        if (dayData && dayData.appointments) {
+            modalDate.value = day.date;
+            selectedDayAppointments.value = dayData.appointments;
+            showModal.value = true;
+        }
+    }
+    selectDate(day.date);
+}
+
 function selectDate(date: Date) {
     monitoringStore.setSelectedDate(date);
     emit('dateSelected', date);
@@ -139,33 +155,54 @@ const emit = defineEmits<{
 
 async function loadAppointmentCounts() {
     try {
-        // Obtener todas las citas
+        // Get all appointments
         const response = await api.get('/appointments');
         const appointments = response.data;
         
-        // Contar citas por día
-        const counts: Record<string, number> = {};
+        // Count appointments by day and store appointment data
+        const dataByDate: Record<string, any[]> = {};
         appointments.forEach((apt: any) => {
             const dateKey = new Date(apt.dateTime).toISOString().split('T')[0];
-            counts[dateKey] = (counts[dateKey] || 0) + 1;
+            if (!dataByDate[dateKey]) {
+                dataByDate[dateKey] = [];
+            }
+            dataByDate[dateKey].push(apt);
         });
         
-        // Actualizar occupancyData
-        Object.keys(counts).forEach(dateKey => {
-            const count = counts[dateKey];
+        // Update occupancyData with counts and appointment data
+        occupancyData.value = {};
+        Object.keys(dataByDate).forEach(dateKey => {
+            const count = dataByDate[dateKey].length;
             let level = 'low';
             if (count > 30) level = 'high';
             else if (count > 15) level = 'medium';
             
-            occupancyData.value[dateKey] = { count, level };
+            occupancyData.value[dateKey] = { 
+                count, 
+                level,
+                appointments: dataByDate[dateKey]
+            };
         });
     } catch (error) {
         console.error('Error loading appointment counts:', error);
     }
 }
 
+function handleAppointmentUpdate() {
+    loadAppointmentCounts();
+}
+
 onMounted(() => {
     loadAppointmentCounts();
+    
+    // Listen for real-time appointment updates
+    websocketService.on('appointment:created', handleAppointmentUpdate);
+    websocketService.on('appointment:updated', handleAppointmentUpdate);
+});
+
+onUnmounted(() => {
+    websocketService.off('appointment:created', handleAppointmentUpdate);
+    websocketService.off('appointment:updated', handleAppointmentUpdate);
 });
 </script>
 
@@ -183,14 +220,14 @@ onMounted(() => {
 .panel-header {
     padding: 20px 24px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    background: #FCFCFC;
 }
 
 .panel-header h2 {
     margin: 0 0 12px 0;
     font-size: 18px;
     font-weight: 600;
-    color: #263238;
+    color: #223675;
 }
 
 .month-selector {
@@ -225,8 +262,8 @@ onMounted(() => {
 }
 
 .nav-btn:hover {
-    background: #00bcd4;
-    border-color: #00bcd4;
+    background: #5371C4;
+    border-color: #5371C4;
     color: white;
 }
 
@@ -273,8 +310,8 @@ onMounted(() => {
 }
 
 .calendar-day.selected {
-    background: #e0f7fa;
-    border-color: #00bcd4;
+    background: #C3E1ED;
+    border-color: #5371C4;
     font-weight: 700;
 }
 
@@ -284,35 +321,14 @@ onMounted(() => {
 }
 
 .calendar-day.has-appointments {
-    background: #e8f5e9;
-}
-
-.calendar-day.medium-occupancy {
-    background: #fff9c4;
-}
-
-.calendar-day.high-occupancy {
-    background: #ffcdd2;
+    background: #CEEAC7;
 }
 
 .day-number {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 2px;
-    color: #263238;
-}
-
-.appointment-count {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    background: #00bcd4;
-    color: white;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 5px;
-    border-radius: 8px;
-    min-width: 16px;
+    color: #223675;
 }
 
 .legend {
@@ -341,11 +357,8 @@ onMounted(() => {
     border: 2px solid #ff9800;
 }
 
-.medium-indicator {
-    background: #fff9c4;
-}
-
-.high-indicator {
-    background: #ffcdd2;
+.has-appointments-indicator {
+    background: #CEEAC7;
+    border: 2px solid #A5D8A9;
 }
 </style>

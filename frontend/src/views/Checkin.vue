@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '../services/api';
 import { useToast } from "vue-toastification";
 import { websocketService } from '../services/websocket.service';
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const toast = useToast();
 const showSuccess = ref(false);
@@ -560,23 +561,15 @@ onUnmounted(() => {
 
 <template>
   <div class="min-h-screen bg-white flex flex-col">
-    <!-- Header -->
-    <header class="px-8 py-6 border-b border-gray-100">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-          I
-        </div>
-        <span class="text-xl font-semibold text-gray-800">Instituto Oncológico</span>
-      </div>
-    </header>
+    <GlobalHeader />
 
     <!-- Main Content: Appointment Table -->
     <div v-if="showTable && !showSuccess && !showVerification" class="flex-1 p-8 overflow-auto bg-gray-50/50">
       <div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">Citas para Hoy</h1>
-            <p class="text-lg text-gray-600">Busca tu nombre y selecciona tu cita para confirmar tu llegada.</p>
+            <h1 class="text-4xl font-bold text-onkos-dark-blue mb-2">Citas para Hoy</h1>
+            <p class="text-lg text-onkos-medium-blue">Busca tu nombre y selecciona tu cita para confirmar tu llegada.</p>
           </div>
           <div class="flex items-center gap-4">
             <div class="relative">
@@ -693,8 +686,8 @@ onUnmounted(() => {
           <div class="inline-block p-4 bg-primary/10 rounded-3xl mb-6">
             <span class="text-4xl">🆔</span>
           </div>
-          <h1 class="text-5xl font-bold text-gray-900 mb-4">Confirmar Identidad</h1>
-          <p class="text-xl text-gray-600">Hola <strong>{{ selectedAppointment?.contactName }}</strong>, por favor escanea tu documento para confirmar tu llegada.</p>
+          <h1 class="text-5xl font-bold text-onkos-dark-blue mb-4">Confirmar Identidad</h1>
+          <p class="text-xl text-onkos-medium-blue">Hola <strong>{{ selectedAppointment?.contactName }}</strong>, por favor escanea tu documento para confirmar tu llegada.</p>
         </div>
 
         <!-- ID Card Icon - CLICKABLE -->
@@ -707,7 +700,7 @@ onUnmounted(() => {
             <!-- ID Card Illustration -->
             <svg width="280" height="180" viewBox="0 0 240 160" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl group-hover:drop-shadow-xl transition-all">
               <!-- Card Background -->
-              <rect x="10" y="15" width="220" height="130" rx="12" fill="#F4F6F8" stroke="#2BB88A" stroke-width="3" class="group-hover:fill-green-50 transition-colors"/>
+              <rect x="10" y="15" width="220" height="130" rx="12" fill="#FCFCFC" stroke="#223675" stroke-width="3" class="group-hover:fill-onkos-light-blue/10 transition-colors"/>
               
               <!-- Photo placeholder -->
               <rect x="25" y="30" width="60" height="75" rx="6" fill="#D1D5DB" class="group-hover:fill-gray-400 transition-colors"/>
@@ -715,24 +708,24 @@ onUnmounted(() => {
               <path d="M55 70 Q40 90, 55 95 Q70 90, 55 70" fill="#9CA3AF"/>
               
               <!-- Text lines -->
-              <rect x="100" y="35" width="110" height="8" rx="4" fill="#2BB88A" opacity="0.6"/>
+              <rect x="100" y="35" width="110" height="8" rx="4" fill="#223675" opacity="0.6"/>
               <rect x="100" y="50" width="90" height="6" rx="3" fill="#9CA3AF"/>
               <rect x="100" y="63" width="100" height="6" rx="3" fill="#9CA3AF"/>
               <rect x="100" y="76" width="70" height="6" rx="3" fill="#9CA3AF"/>
               
               <!-- Barcode -->
-              <rect x="25" y="115" width="190" height="20" rx="4" fill="white" stroke="#2BB88A" stroke-width="2"/>
-              <line x1="35" y1="120" x2="35" y2="130" stroke="#2BB88A" stroke-width="2"/>
-              <line x1="45" y1="120" x2="45" y2="130" stroke="#2BB88A" stroke-width="3"/>
-              <line x1="55" y1="120" x2="55" y2="130" stroke="#2BB88A" stroke-width="1"/>
-              <line x1="65" y1="120" x2="65" y2="130" stroke="#2BB88A" stroke-width="2"/>
-              <line x1="75" y1="120" x2="75" y2="130" stroke="#2BB88A" stroke-width="3"/>
-              <line x1="85" y1="120" x2="85" y2="130" stroke="#2BB88A" stroke-width="2"/>
-              <line x1="95" y1="120" x2="95" y2="130" stroke="#2BB88A" stroke-width="1"/>
-              <line x1="105" y1="120" x2="105" y2="130" stroke="#2BB88A" stroke-width="3"/>
+              <rect x="25" y="115" width="190" height="20" rx="4" fill="white" stroke="#223675" stroke-width="2"/>
+              <line x1="35" y1="120" x2="35" y2="130" stroke="#223675" stroke-width="2"/>
+              <line x1="45" y1="120" x2="45" y2="130" stroke="#223675" stroke-width="3"/>
+              <line x1="55" y1="120" x2="55" y2="130" stroke="#223675" stroke-width="1"/>
+              <line x1="65" y1="120" x2="65" y2="130" stroke="#223675" stroke-width="2"/>
+              <line x1="75" y1="120" x2="75" y2="130" stroke="#223675" stroke-width="3"/>
+              <line x1="85" y1="120" x2="85" y2="130" stroke="#223675" stroke-width="2"/>
+              <line x1="95" y1="120" x2="95" y2="130" stroke="#223675" stroke-width="1"/>
+              <line x1="105" y1="120" x2="105" y2="130" stroke="#223675" stroke-width="3"/>
               
               <!-- Scan effect on hover -->
-              <line x1="0" y1="75" x2="240" y2="75" stroke="#2BB88A" stroke-width="2" opacity="0" class="group-hover:opacity-40 transition-opacity scan-line"/>
+              <line x1="0" y1="75" x2="240" y2="75" stroke="#CEEAC7" stroke-width="2" opacity="0" class="group-hover:opacity-40 transition-opacity scan-line"/>
             </svg>
             
             <!-- Hover overlay text -->

@@ -24,6 +24,7 @@
                         <option value="CONSULTORIO">Consultorio</option>
                         <option value="TRATAMIENTO">Sala de Tratamiento</option>
                         <option value="ESTANCIA">Estancia (Cama)</option>
+                        <option value="TRIAJE">Triaje</option>
                     </select>
                 </div>
 
@@ -68,7 +69,7 @@ import { resourceService } from '../../services/resource.service';
 import { useMonitoringStore } from '../../stores/monitoring.store';
 
 const props = defineProps<{
-    resourceType: 'CONSULTORIO' | 'TRATAMIENTO' | 'ESTANCIA'
+    resourceType: 'CONSULTORIO' | 'TRATAMIENTO' | 'ESTANCIA' | 'TRIAJE'
 }>();
 
 const emit = defineEmits<{
@@ -118,7 +119,8 @@ onMounted(() => {
     const typeNames = {
         CONSULTORIO: 'Consultorio',
         TRATAMIENTO: 'Sala Tratamiento',
-        ESTANCIA: 'Cama'
+        ESTANCIA: 'Cama',
+        TRIAJE: 'Camilla'
     };
     formData.value.name = `${typeNames[props.resourceType]} ${existingCount + 1}`;
 });

@@ -111,6 +111,16 @@ const seed = async () => {
         await Resource.bulkCreate(estancias);
         console.log('Camas de Estancia seeded (4).');
 
+        // Seed Resources - Triaje
+        await Resource.create({
+            name: 'Camilla 1',
+            type: ResourceType.TRIAJE,
+            status: ResourceStatus.DISPONIBLE,
+            capacity: 1,
+            currentOccupancy: 0
+        });
+        console.log('Triaje resource seeded (Camilla 1).');
+
         // Seed Patients
         const patients = [];
         const firstNames = ['Juan', 'María', 'Carlos', 'Ana', 'Luis', 'Carmen', 'Pedro', 'Rosa', 'Miguel', 'Laura',

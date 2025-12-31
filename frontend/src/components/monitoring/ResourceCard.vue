@@ -1,8 +1,11 @@
 <template>
     <div :class="['resource-card-minimal', displayStatusClass, { 'inactive-doctor': isCardDisabled }]">
         <div class="card-content">
-            <div class="icon-container">
+            <div :class="['icon-container', { 'has-timer': showTimer }]">
                 <div class="resource-number">{{ resourceNumber }}</div>
+                <div v-if="showTimer" :class="['timer-mini', timerColorClass]">
+                    {{ formattedTimer }}
+                </div>
             </div>
             <div class="details-container">
                 <div class="detail-text">
@@ -41,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import type { Resource } from '../../services/resource.service';
 import { resourceService } from '../../services/resource.service';
 import { useMonitoringStore } from '../../stores/monitoring.store';
@@ -52,15 +55,20 @@ const props = defineProps<{
     patientName?: string;
     treatmentInfo?: string;
     waitingCount?: number;
+    appointment?: any;
 }>();
 
 const monitoringStore = useMonitoringStore();
+
+const elapsedSeconds = ref(0);
+let timerInterval: number | null = null;
 
 const resourceIconClass = computed(() => {
     switch (props.resource.type) {
         case 'CONSULTORIO': return 'fas fa-stethoscope';
         case 'TRATAMIENTO': return 'fas fa-syringe';
         case 'ESTANCIA': return 'fas fa-bed';
+        case 'TRIAJE': return 'fas fa-user-nurse';
         default: return '';
     }
 });
@@ -141,6 +149,12 @@ const primaryText = computed(() => {
     if (props.resource.type === 'CONSULTORIO') {
         return props.doctorName || props.resource.doctor?.name || 'Sin asignar';
     }
+    if (props.resource.type === 'TRIAJE') {
+        if (props.resource.status === 'OCUPADO') {
+            return props.patientName || (props.resource.currentPatient ? `${props.resource.currentPatient.firstName} ${props.resource.currentPatient.lastName}` : 'Paciente');
+        }
+        return 'Disponible';
+    }
     return props.patientName || 'Paciente';
 });
 
@@ -155,7 +169,80 @@ const secondaryText = computed(() => {
         }
         return 'Sin pacientes';
     }
+    if (props.resource.type === 'TRIAJE') {
+        if (props.resource.status === 'OCUPADO') {
+            return 'En Triaje';
+        }
+        return 'Esperando paciente';
+    }
     return props.treatmentInfo || 'Tratamiento';
+});
+
+const showTimer = computed(() => {
+    return props.resource.status === 'OCUPADO' && props.appointment?.status === 'IN_PROGRESS' && props.appointment?.startTime;
+});
+
+const formattedTimer = computed(() => {
+    const mins = Math.floor(elapsedSeconds.value / 60);
+    const secs = elapsedSeconds.value % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+});
+
+const timerColorClass = computed(() => {
+    if (!props.resource.timing) return 'timer-normal';
+    const timingMinutes = props.resource.timing;
+    const elapsedMinutes = elapsedSeconds.value / 60;
+    
+    if (elapsedMinutes <= timingMinutes) {
+        return 'timer-normal'; // Green
+    } else if (elapsedMinutes <= timingMinutes + 10) {
+        return 'timer-warning'; // Orange
+    } else {
+        return 'timer-danger'; // Red
+    }
+});
+
+function updateTimer() {
+    if (props.appointment?.startTime) {
+        const start = new Date(props.appointment.startTime).getTime();
+        const now = new Date().getTime();
+        elapsedSeconds.value = Math.max(0, Math.floor((now - start) / 1000));
+    }
+}
+
+function startTimerInterval() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    updateTimer();
+    timerInterval = window.setInterval(updateTimer, 1000);
+}
+
+function stopTimerInterval() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    elapsedSeconds.value = 0;
+}
+
+// Watch for changes in showTimer to start/stop timer reactively
+watch(showTimer, (newValue) => {
+    if (newValue) {
+        startTimerInterval();
+    } else {
+        stopTimerInterval();
+    }
+});
+
+onMounted(() => {
+    if (showTimer.value) {
+        startTimerInterval();
+    }
+});
+
+onUnmounted(() => {
+    stopTimerInterval();
 });
 
 </script>
@@ -186,15 +273,15 @@ const secondaryText = computed(() => {
 
 /* Colores homologados: Verde = Disponible, Rojo = Ocupado */
 .resource-card-minimal.status-disponible::before {
-    background: linear-gradient(90deg, #4caf50, #66bb6a);
+    background: #CEEAC7;
 }
 
 .resource-card-minimal.status-ocupado::before {
-    background: linear-gradient(90deg, #f44336, #ef5350);
+    background: #5371C4;
 }
 
 .resource-card-minimal.status-inhabilitado::before {
-    background: linear-gradient(90deg, #9e9e9e, #bdbdbd);
+    background: #D0D0D0;
 }
 
 .resource-card-minimal:hover {
@@ -225,34 +312,43 @@ const secondaryText = computed(() => {
 
 /* Colores de fondo del icono homologados */
 .status-disponible .icon-container {
-    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    background: #CEEAC7;
 }
 
 .status-ocupado .icon-container {
-    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    background: #C3E1ED;
 }
 
 .status-inhabilitado .icon-container {
-    background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+    background: #D0D0D0;
 }
 
 .resource-number {
     font-size: 36px;
     font-weight: 900;
     line-height: 1;
+    transition: all 0.3s ease;
+}
+
+.has-timer .resource-number {
+    font-size: 28px;
+    transform: translateY(-8px);
 }
 
 /* Colores del número según estado */
 .status-disponible .resource-number {
-    color: #a5d8a9;
+    color: #223675;
+    opacity: 0.2;
 }
 
 .status-ocupado .resource-number {
-    color: #ffaaaa;
+    color: #223675;
+    opacity: 0.2;
 }
 
 .status-inhabilitado .resource-number {
-    color: #757575;
+    color: #223675;
+    opacity: 0.1;
 }
 
 .details-container {
@@ -273,7 +369,7 @@ const secondaryText = computed(() => {
 .primary-text {
     font-size: 13px;
     font-weight: 700;
-    color: #37474f;
+    color: #223675;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -281,7 +377,7 @@ const secondaryText = computed(() => {
 
 .secondary-text {
     font-size: 12px;
-    color: #78909c;
+    color: #5371C4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -311,6 +407,11 @@ const secondaryText = computed(() => {
     opacity: 0.7;
     pointer-events: none;
     filter: grayscale(100%);
+}
+
+.inactive-doctor .timer-mini {
+    filter: none !important; /* Preserve timer colors even if card is gray */
+    opacity: 1 !important;
 }
 
 .action-icon-btn {
@@ -345,6 +446,34 @@ const secondaryText = computed(() => {
     background: rgba(0, 0, 0, 0.05);
     color: #546e7a;
     font-weight: 500;
+}
+
+.timer-mini {
+    position: absolute;
+    bottom: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    z-index: 5;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.timer-normal {
+    color: #2e7d32;
+}
+
+.timer-warning {
+    color: #f57c00;
+}
+
+.timer-danger {
+    color: #c62828;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 /* Responsive para pantallas pequeñas */

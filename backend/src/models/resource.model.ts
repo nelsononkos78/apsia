@@ -1,11 +1,13 @@
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
 import { Patient } from './patient.model';
 import { Doctor } from './doctor.model';
+import { Appointment } from './appointment.model';
 
 export enum ResourceType {
     CONSULTORIO = 'CONSULTORIO',
     TRATAMIENTO = 'TRATAMIENTO',
-    ESTANCIA = 'ESTANCIA'
+    ESTANCIA = 'ESTANCIA',
+    TRIAJE = 'TRIAJE'
 }
 
 export enum ResourceStatus {
@@ -68,6 +70,13 @@ export class Resource extends Model {
 
     @BelongsTo(() => Doctor)
     doctor!: Doctor | null;
+
+    @ForeignKey(() => Appointment)
+    @Column({ type: DataType.INTEGER, allowNull: true })
+    currentAppointmentId!: number | null;
+
+    @BelongsTo(() => Appointment)
+    currentAppointment!: Appointment | null;
 
     @CreatedAt
     createdAt!: Date;

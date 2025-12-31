@@ -34,7 +34,7 @@
                         </span>
                         <span class="meta-item wait-time">
                             <i class="fas fa-clock"></i>
-                            {{ calculateWaitTime(record.checkInTime) }}
+                            {{ calculateWaitTime(record.appointment?.checkinTime || record.checkInTime) }}
                         </span>
                     </div>
                 </div>
@@ -130,7 +130,7 @@ async function markAttended(id: number) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    background: #FCFCFC;
 }
 
 .header-left {
@@ -141,14 +141,14 @@ async function markAttended(id: number) {
 
 .header-icon {
     font-size: 24px;
-    color: #00bcd4;
+    color: #5371C4;
 }
 
 .panel-header-modern h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #263238;
+    color: #223675;
 }
 
 .stats-badges {
@@ -164,8 +164,8 @@ async function markAttended(id: number) {
 }
 
 .badge-total {
-    background: #e0f7fa;
-    color: #00838f;
+    background: #C3E1ED;
+    color: #223675;
 }
 
 .badge-urgent {
@@ -205,7 +205,7 @@ async function markAttended(id: number) {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+    background: #C3E1ED;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -214,7 +214,7 @@ async function markAttended(id: number) {
 
 .patient-avatar i {
     font-size: 16px;
-    color: #00838f;
+    color: #223675;
 }
 
 .patient-details {
@@ -233,7 +233,7 @@ async function markAttended(id: number) {
 .patient-name {
     font-size: 13px;
     font-weight: 600;
-    color: #263238;
+    color: #223675;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -258,8 +258,8 @@ async function markAttended(id: number) {
 }
 
 .office-badge {
-    background: #e3f2fd;
-    color: #1976d2;
+    background: #CEEAC7;
+    color: #223675;
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 10px;

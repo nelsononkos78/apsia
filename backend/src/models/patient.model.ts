@@ -33,7 +33,7 @@ export class Patient extends Model {
     @Column({ type: DataType.STRING, field: 'document_number' })
     documentNumber!: string;
 
-    @Column({ type: DataType.STRING(20), field: 'medical_record_number', unique: true })
+    @Column({ type: DataType.STRING(50), field: 'medical_record_number', unique: true })
     medicalRecordNumber!: string;
 
     @Column({ type: DataType.STRING, field: 'onc_dni' })

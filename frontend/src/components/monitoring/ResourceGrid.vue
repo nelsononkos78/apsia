@@ -25,6 +25,7 @@
                 :patientName="resourceDetails[resource.id]?.patientName"
                 :treatmentInfo="resourceDetails[resource.id]?.treatmentInfo"
                 :waitingCount="getWaitingCount(resource.doctorId)"
+                :appointment="resourceDetails[resource.id]?.appointment"
             />
         </div>
 
@@ -46,9 +47,9 @@ import type { Resource } from '../../services/resource.service';
 import { useMonitoringStore } from '../../stores/monitoring.store';
 
 const props = defineProps<{
-    type: 'CONSULTORIO' | 'TRATAMIENTO' | 'ESTANCIA';
+    type: 'CONSULTORIO' | 'TRATAMIENTO' | 'ESTANCIA' | 'TRIAJE';
     resources: Resource[];
-    resourceDetails?: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string }>;
+    resourceDetails?: Record<number, { doctorName?: string; patientName?: string; treatmentInfo?: string; appointment?: any }>;
 }>();
 
 const showAddModal = ref(false);
@@ -58,6 +59,7 @@ const typeIcon = computed(() => {
         case 'CONSULTORIO': return 'fa-stethoscope';
         case 'TRATAMIENTO': return 'fa-syringe';
         case 'ESTANCIA': return 'fa-bed';
+        case 'TRIAJE': return 'fa-user-nurse';
         default: return '';
     }
 });
@@ -67,6 +69,7 @@ const typeTitle = computed(() => {
         case 'CONSULTORIO': return 'Consultorios';
         case 'TRATAMIENTO': return 'Sala de Tratamientos';
         case 'ESTANCIA': return 'Estancia (Camas)';
+        case 'TRIAJE': return 'Triaje';
         default: return '';
     }
 });
@@ -107,7 +110,7 @@ function handleResourceAdded() {
     gap: 16px;
     margin-bottom: 16px;
     padding: 16px;
-    background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+    background: #5371C4;
     border-radius: 12px;
     color: white;
 }
@@ -140,20 +143,23 @@ function handleResourceAdded() {
 }
 
 .stat.available {
-    background: rgba(76, 175, 80, 0.8);
+    background: #CEEAC7;
+    color: #223675;
 }
 
 .stat.occupied {
-    background: rgba(244, 67, 54, 0.8);
+    background: #223675;
+    color: white;
 }
 
 .stat.disabled {
-    background: rgba(158, 158, 158, 0.8);
+    background: #D0D0D0;
+    color: #223675;
 }
 
 .btn-add {
     background: rgba(255, 255, 255, 0.9);
-    color: #667eea;
+    color: #223675;
     border: none;
     padding: 8px 16px;
     border-radius: 8px;

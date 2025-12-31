@@ -7,9 +7,15 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: '#2BB88A',
-                secondary: '#F4F6F8',
-                accent: '#F5A623',
+                primary: '#5371C4',
+                secondary: '#FCFCFC',
+                accent: '#CEEAC7',
+                'onkos-dark-blue': '#223675',
+                'onkos-medium-blue': '#5371C4',
+                'onkos-light-blue': '#C3E1ED',
+                'onkos-light-green': '#CEEAC7',
+                'onkos-grey': '#D0D0D0',
+                'onkos-white': '#FCFCFC',
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],

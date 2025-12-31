@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 </script>
 
 <template>
-  <div class="min-h-screen bg-secondary p-6">
+  <div class="min-h-screen bg-secondary">
+    <GlobalHeader />
+    <div class="p-6">
     <h1 class="text-3xl font-bold mb-8">Dashboard Administrativo</h1>
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -28,6 +31,7 @@
       <div class="card h-64 flex items-center justify-center bg-white">
         <span class="text-gray-400">Gráfico de Ocupación</span>
       </div>
+    </div>
     </div>
   </div>
 </template>

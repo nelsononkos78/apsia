@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { useToast } from "vue-toastification";
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 
 const toast = useToast();
 const router = useRouter();
@@ -281,12 +282,13 @@ loadDoctors();
 </script>
 
 <template>
-  <div class="min-h-screen bg-secondary py-8 px-4">
-    <div class="max-w-5xl mx-auto">
+  <div class="min-h-screen bg-secondary">
+    <GlobalHeader />
+    <div class="max-w-5xl mx-auto py-8 px-4">
       <!-- Header -->
       <div class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-800 mb-2">Reservar una Nueva Cita</h1>
-        <p class="text-gray-600">Complete los siguientes pasos para agendar su próxima visita.</p>
+        <h1 class="text-4xl font-bold text-onkos-dark-blue mb-2">Reservar una Nueva Cita</h1>
+        <p class="text-onkos-medium-blue">Complete los siguientes pasos para agendar su próxima visita.</p>
       </div>
 
       <!-- Progress Indicator -->
@@ -320,7 +322,7 @@ loadDoctors();
 
       <!-- Step 1: Service Details -->
       <div v-show="step === 1" class="card animate-fade-in">
-        <h2 class="text-2xl font-bold mb-6">Tipo de Servicio</h2>
+        <h2 class="text-2xl font-bold mb-6 text-onkos-dark-blue">Tipo de Servicio</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div 
@@ -331,12 +333,12 @@ loadDoctors();
                      formData.serviceTypeId === type.id ? 'border-primary bg-primary/5 shadow-inner' : 'border-gray-100 bg-white']"
           >
             <div class="text-3xl mb-2">{{ type.icon }}</div>
-            <h4 class="font-bold text-gray-900">{{ type.name }}</h4>
+            <h4 class="font-bold text-onkos-dark-blue">{{ type.name }}</h4>
             <p class="text-xs text-gray-500 mt-1">{{ type.description }}</p>
           </div>
         </div>
 
-        <h3 :class="['text-xl font-bold mb-4 transition-opacity', !formData.serviceTypeId ? 'opacity-50' : 'opacity-100']">
+        <h3 :class="['text-xl font-bold mb-4 transition-opacity text-onkos-dark-blue', !formData.serviceTypeId ? 'opacity-50' : 'opacity-100']">
           Detalles de la Consulta
         </h3>
         

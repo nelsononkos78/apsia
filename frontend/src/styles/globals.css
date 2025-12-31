@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 body {
-  @apply bg-secondary text-gray-800 font-sans;
+  @apply bg-onkos-white text-onkos-dark-blue font-sans;
 }
 
 .btn-primary {
-  @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors;
+  @apply bg-onkos-light-green text-onkos-dark-blue px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors font-semibold;
 }
 
 .btn-secondary {

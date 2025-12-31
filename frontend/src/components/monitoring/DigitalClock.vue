@@ -1,32 +1,39 @@
 <template>
-  <div class="digital-clock">
-    <div class="time">{{ time }}</div>
-    <div class="date">{{ date }}</div>
+  <div class="digital-clock-container">
+    <div class="date-section">
+      <i class="far fa-calendar-alt"></i>
+      <span class="date-text">{{ date }}</span>
+    </div>
+    <div class="time-section">
+      <span class="time-text">{{ time }}</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const time = ref(new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+const time = ref('');
 const date = ref('');
 let timer: number | undefined;
 
 const updateClock = () => {
   const now = new Date();
+  
+  // Time format: HH:mm
   time.value = now.toLocaleTimeString('es-ES', { 
     hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit' 
+    minute: '2-digit',
+    hour12: false
   });
+
+  // Date format: martes, 30 de diciembre
   date.value = now.toLocaleDateString('es-ES', { 
     weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+    day: 'numeric',
+    month: 'long'
   });
   
-  // Use recursive setTimeout for robust scheduling
   timer = window.setTimeout(updateClock, 1000);
 };
 
@@ -40,28 +47,51 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.digital-clock {
-  background: #263238;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  min-width: 200px;
+.digital-clock-container {
+  background: #223675;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 16px;
+  border: 1px solid #5371C4;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.time {
-  font-size: 24px;
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 2px;
-  line-height: 1.2;
+.date-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #C3E1ED;
+  font-size: 1.1rem;
+  font-weight: 500;
 }
 
-.date {
-  font-size: 11px;
+.date-section i {
+  font-size: 1.2rem;
   opacity: 0.8;
-  text-transform: capitalize;
-  margin-top: 2px;
+}
+
+.date-text {
+  text-transform: lowercase;
+}
+
+.date-text::first-letter {
+  text-transform: none;
+}
+
+.time-section {
+  background: #5371C4;
+  color: white;
+  padding: 0.4rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid #C3E1ED;
+}
+
+.time-text {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 </style>

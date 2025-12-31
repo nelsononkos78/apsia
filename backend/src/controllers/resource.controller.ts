@@ -5,6 +5,8 @@ import { WaitingRoom, WaitingRoomStatus } from '../models/waiting-room.model';
 import { Appointment } from '../models/appointment.model';
 import { Patient } from '../models/patient.model';
 import { Queue } from '../models/queue.model';
+import { ServiceType } from '../models/service-type.model';
+import { Op } from 'sequelize';
 import { getWebSocketService } from '../services/websocket.service';
 import { getTvService } from '../services/tv.service';
 
@@ -190,22 +192,50 @@ export class ResourceController {
             const { id } = req.params;
             const resource = await resourceService.getResourceById(Number(id));
 
-            if (!resource || !resource.doctorId) {
-                return res.status(400).json({ message: 'Resource not found or no doctor assigned' });
+            if (!resource) {
+                return res.status(404).json({ message: 'Resource not found' });
             }
 
-            // Find next patient for this doctor
+            if (resource.type !== ResourceType.TRIAJE && !resource.doctorId) {
+                return res.status(400).json({ message: 'No doctor assigned to this resource' });
+            }
+
+            // Find next patient based on resource type
+            let appointmentWhere: any = {};
+
+            if (resource.type === ResourceType.TRIAJE) {
+                // For Triaje: Only new patients who haven't completed triaje
+                appointmentWhere = {
+                    triajeCompleted: false,
+                    '$serviceType.code$': 'CONSULTATION_NEW'
+                };
+            } else {
+                // For other resources (Consultorio): 
+                // Follow-up patients OR (New patients AND triaje completed)
+                appointmentWhere = {
+                    doctorId: resource.doctorId,
+                    [Op.or]: [
+                        { '$serviceType.code$': { [Op.ne]: 'CONSULTATION_NEW' } },
+                        { triajeCompleted: true }
+                    ]
+                };
+            }
+
             const nextPatient = await WaitingRoom.findOne({
                 where: {
                     status: WaitingRoomStatus.ESPERANDO,
-                    // You might want to filter by doctorId if WaitingRoom has it, or via Appointment
                 },
                 include: [{
                     model: Appointment,
-                    where: { doctorId: resource.doctorId },
-                    include: [Queue]
+                    as: 'appointment',
+                    where: appointmentWhere,
+                    include: [
+                        { model: Queue, as: 'queue' },
+                        { model: ServiceType, as: 'serviceType' }
+                    ]
                 }, {
-                    model: Patient
+                    model: Patient,
+                    as: 'patient'
                 }],
                 order: [['priority', 'DESC'], ['checkInTime', 'ASC']]
             });
@@ -228,7 +258,8 @@ export class ResourceController {
             // Update Resource
             await resource.update({
                 status: 'OCUPADO',
-                currentPatientId: nextPatient.patientId
+                currentPatientId: nextPatient.patientId,
+                currentAppointmentId: nextPatient.appointmentId
             });
 
             // Update Queue status (Set as current turn)

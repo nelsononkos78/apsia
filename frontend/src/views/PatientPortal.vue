@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import GlobalHeader from '../components/common/GlobalHeader.vue';
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-secondary p-4">
+  <div class="min-h-screen flex flex-col bg-secondary">
+    <GlobalHeader />
+    <div class="flex-1 flex flex-col items-center justify-center p-4">
     <div class="max-w-md w-full text-center space-y-8">
       <h1 class="text-4xl font-bold text-primary">Bienvenido a Onkos</h1>
       <p class="text-gray-600">Gestión de Citas y Turnos</p>
@@ -25,6 +28,7 @@
         <router-link to="/tv" class="text-sm text-gray-500 hover:text-primary">
           Pantalla TV
         </router-link>
+      </div>
       </div>
     </div>
   </div>
