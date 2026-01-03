@@ -27,6 +27,8 @@ const login = async () => {
       router.push('/admin');
     } else if (user.role === 'DOCTOR') {
       router.push('/doctor/dashboard');
+    } else if (user.role === 'NURSE_GENERAL' || user.role === 'TRIAJE') {
+      router.push('/triage');
     } else {
       router.push('/monitoring');
     }

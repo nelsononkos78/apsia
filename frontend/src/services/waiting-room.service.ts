@@ -98,6 +98,13 @@ export class WaitingRoomService {
         const response = await api.get('/waiting-room/statistics');
         return response.data;
     }
+
+    /**
+     * Marcar todos los pacientes como atendidos
+     */
+    async markAllAsAttended(): Promise<void> {
+        await api.post('/waiting-room/attend-all');
+    }
 }
 
 export const waitingRoomService = new WaitingRoomService();

@@ -2,7 +2,8 @@ import { Resource, ResourceStatus, ResourceType, InhabilitadoReason } from '../m
 import { Patient } from '../models/patient.model';
 import { Doctor } from '../models/doctor.model';
 import { DoctorSchedule } from '../models/doctor-schedule.model';
-import { Appointment } from '../models/appointment.model';
+import { Appointment, AppointmentStatus } from '../models/appointment.model';
+import { WaitingRoom, WaitingRoomStatus } from '../models/waiting-room.model';
 import { Op } from 'sequelize';
 import { getWebSocketService } from './websocket.service';
 
@@ -14,6 +15,7 @@ export class ResourceService {
         return await Resource.findAll({
             include: [
                 { model: Patient, as: 'currentPatient' },
+                { model: Appointment, as: 'currentAppointment' },
                 {
                     model: Doctor,
                     as: 'doctor',
@@ -32,6 +34,7 @@ export class ResourceService {
             where: { type },
             include: [
                 { model: Patient, as: 'currentPatient' },
+                { model: Appointment, as: 'currentAppointment' },
                 {
                     model: Doctor,
                     as: 'doctor',
@@ -49,6 +52,7 @@ export class ResourceService {
         return await Resource.findByPk(id, {
             include: [
                 { model: Patient, as: 'currentPatient' },
+                { model: Appointment, as: 'currentAppointment' },
                 {
                     model: Doctor,
                     as: 'doctor',
@@ -178,10 +182,43 @@ export class ResourceService {
         resource.status = ResourceStatus.DISPONIBLE;
 
         // If it's a Triaje resource, mark the appointment as triajeCompleted
+        // and return the patient to the waiting room
         if (resource.type === ResourceType.TRIAJE && resource.currentAppointmentId) {
             await Appointment.update(
                 { triajeCompleted: true },
                 { where: { id: resource.currentAppointmentId } }
+            );
+
+            // Return to waiting room
+            const waitingRecord = await WaitingRoom.findOne({
+                where: { appointmentId: resource.currentAppointmentId }
+            });
+
+            if (waitingRecord) {
+                waitingRecord.status = WaitingRoomStatus.ESPERANDO;
+                await waitingRecord.save();
+
+                // Emit WebSocket event for waiting room update
+                this.emitWaitingRoomUpdate(waitingRecord.id);
+            }
+        } else if (resource.type === ResourceType.CONSULTORIO && resource.currentAppointmentId) {
+            // If it's a Consultorio, mark as ATENDIDO in waiting room
+            const waitingRecord = await WaitingRoom.findOne({
+                where: { appointmentId: resource.currentAppointmentId }
+            });
+
+            if (waitingRecord) {
+                waitingRecord.status = WaitingRoomStatus.ATENDIDO;
+                await waitingRecord.save();
+
+                // Emit WebSocket event for waiting room update
+                this.emitWaitingRoomUpdate(waitingRecord.id);
+            }
+
+            // Also mark appointment as COMPLETED if it was IN_PROGRESS
+            await Appointment.update(
+                { status: AppointmentStatus.COMPLETED },
+                { where: { id: resource.currentAppointmentId, status: AppointmentStatus.IN_PROGRESS } }
             );
         }
 
@@ -270,5 +307,28 @@ export class ResourceService {
         });
 
         return stats;
+    }
+
+    /**
+     * Helper para emitir actualizaciones de sala de espera
+     */
+    private async emitWaitingRoomUpdate(id: number) {
+        try {
+            const wsService = getWebSocketService();
+            const recordWithData = await WaitingRoom.findByPk(id, {
+                include: [
+                    { model: Patient },
+                    {
+                        model: Appointment,
+                        include: ['serviceType', 'doctor']
+                    }
+                ]
+            });
+            if (recordWithData) {
+                wsService.emitWaitingRoomUpdate(recordWithData.toJSON());
+            }
+        } catch (error) {
+            console.error('❌ Error emitting waiting room update:', error);
+        }
     }
 }

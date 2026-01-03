@@ -100,7 +100,14 @@
                                 </button>
                             </div>
                             <div class="tab-content">
-                                <div class="textarea-wrapper">
+                                <div v-if="activeTab === 'EXAMEN FISICO' && currentPatient" class="physical-exam-tab">
+                                    <PhysicalExamForm 
+                                        :patientId="currentPatient.id"
+                                        :appointmentId="currentAppointment.id"
+                                        :staffId="user.id"
+                                    />
+                                </div>
+                                <div v-else class="textarea-wrapper">
                                     <textarea 
                                         v-model="clinicalNotes[activeTab]" 
                                         :placeholder="'Escribir ' + activeTab.toLowerCase() + '...'"
@@ -134,6 +141,9 @@
                             </span>
                             <span class="badge badge-waiting" title="En espera">
                                 <i class="fas fa-clock"></i> {{ waitingList.length }}
+                            </span>
+                            <span v-if="pendingTriajeCount > 0" class="badge badge-triaje" title="En triaje">
+                                <i class="fas fa-user-nurse"></i> {{ pendingTriajeCount }}
                             </span>
                         </div>
                     </div>
@@ -179,15 +189,18 @@ import api from '../services/api';
 import { websocketService } from '../services/websocket.service';
 import DigitalClock from '../components/monitoring/DigitalClock.vue';
 import GlobalHeader from '../components/common/GlobalHeader.vue';
+import PhysicalExamForm from '../components/clinical/PhysicalExamForm.vue';
 
 const router = useRouter();
 
 const doctor = ref<any>(null);
+const user = ref<any>(null);
 const resource = ref<any>(null);
 const waitingList = ref<any[]>([]);
 const currentPatient = ref<any>(null);
 const currentAppointment = ref<any>(null);
 const attendedCount = ref(0);
+const pendingTriajeCount = ref(0);
 
 // Clock and Timer
 const currentTime = ref('');
@@ -278,8 +291,9 @@ async function improveTextWithAI() {
 
 async function loadDashboard() {
     try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const email = user.email || 'antonio.camargo@onkos.pe'; 
+        const userLocal = JSON.parse(localStorage.getItem('user') || '{}');
+        user.value = userLocal;
+        const email = userLocal.email || 'antonio.camargo@onkos.pe'; 
 
         const res = await api.get(`/doctors/dashboard?email=${email}`);
         const data = res.data;
@@ -288,6 +302,7 @@ async function loadDashboard() {
         resource.value = data.resource;
         waitingList.value = data.waitingList;
         attendedCount.value = data.attendedCount || 0;
+        pendingTriajeCount.value = data.pendingTriajeCount || 0;
 
         if (resource.value?.currentPatient) {
             currentPatient.value = resource.value.currentPatient;
@@ -317,8 +332,12 @@ async function callPatient(record: any) {
         await loadDashboard();
         
         consultationSeconds.value = 0;
-    } catch (error) {
-        console.error('Error calling patient:', error);
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            alert(error.response.data.message);
+        } else {
+            console.error('Error calling patient:', error);
+        }
     }
 }
 
@@ -858,6 +877,12 @@ onUnmounted(() => {
     color: white;
 }
 
+.badge-triaje {
+    background: #FDE68A;
+    color: #92400E;
+    border: 1px solid #F59E0B;
+}
+
 .badge-attended {
     background: #CEEAC7;
     color: #223675;
@@ -975,5 +1000,9 @@ onUnmounted(() => {
 .waiting-list::-webkit-scrollbar-thumb {
     background: #cbd5e0;
     border-radius: 10px;
+}
+
+.physical-exam-tab {
+    width: 100%;
 }
 </style>

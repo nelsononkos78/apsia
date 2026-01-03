@@ -52,12 +52,7 @@ export class DoctorService {
                                 ]
                             },
                             {
-                                [Op.or]: [
-                                    // Patients with follow-up or other types don't need triaje
-                                    { '$appointment.serviceType.code$': { [Op.ne]: 'CONSULTATION_NEW' } },
-                                    // New patients must have triaje completed
-                                    { triajeCompleted: true }
-                                ]
+                                triajeCompleted: true
                             }
                         ]
                     },
@@ -69,11 +64,15 @@ export class DoctorService {
         });
 
         let currentAppointment = null;
-        if (resource?.currentPatientId) {
+        if (resource?.currentAppointmentId) {
+            currentAppointment = await Appointment.findByPk(resource.currentAppointmentId, {
+                include: [{ model: ServiceType, as: 'serviceType' }]
+            });
+        } else if (resource?.currentPatientId) {
+            // Fallback for older data or if currentAppointmentId is missing
             currentAppointment = await Appointment.findOne({
                 where: {
                     patientId: resource.currentPatientId,
-                    doctorId: doctor.id,
                     status: {
                         [Op.notIn]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED]
                     }
@@ -95,12 +94,39 @@ export class DoctorService {
             }
         });
 
+        // Get count of patients pending triaje for this doctor
+        const pendingTriajeCount = await WaitingRoom.count({
+            where: {
+                status: WaitingRoomStatus.ESPERANDO
+            },
+            include: [
+                {
+                    model: Appointment,
+                    where: {
+                        [Op.and]: [
+                            {
+                                [Op.or]: [
+                                    { doctorId: doctor.id },
+                                    { doctorId: null }
+                                ]
+                            },
+                            {
+                                triajeCompleted: false
+                            }
+                        ]
+                    },
+                    required: true
+                }
+            ]
+        });
+
         return {
             doctor,
             resource,
             waitingList,
             currentAppointment,
-            attendedCount
+            attendedCount,
+            pendingTriajeCount
         };
     }
 
@@ -133,12 +159,21 @@ export class DoctorService {
             // Set all other items as not current
             await Queue.update({ isCurrent: false }, { where: { isCompleted: false } });
 
-            // Set this item as current
-            await Queue.update({ isCurrent: true }, { where: { appointmentId: waitingRoomEntry.appointmentId } });
+            // Set this item as current and update serviceArea
+            await Queue.update(
+                {
+                    isCurrent: true,
+                    serviceArea: resource.name
+                },
+                { where: { appointmentId: waitingRoomEntry.appointmentId } }
+            );
 
-            // Link appointment to resource
+            // Link appointment to resource and doctor
             await Appointment.update(
-                { resourceId: resource.id },
+                {
+                    resourceId: resource.id,
+                    doctorId: doctorId // Assign doctor if not already assigned
+                },
                 { where: { id: waitingRoomEntry.appointmentId } }
             );
 
@@ -161,7 +196,9 @@ export class DoctorService {
 
         wsService.emitToTv({
             patientName: `${waitingRoomEntry.patient.firstName} ${waitingRoomEntry.patient.lastName}`,
+            patient: `${waitingRoomEntry.patient.firstName} ${waitingRoomEntry.patient.lastName}`, // Compatibility
             ticketNumber: ticketNumber,
+            ticket: ticketNumber, // Compatibility
             destination: resource.name,
             doctorName: (await Doctor.findByPk(doctorId))?.name
         });

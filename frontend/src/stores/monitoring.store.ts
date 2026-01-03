@@ -100,6 +100,10 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         waitingRoom.value = waitingRoom.value.filter(w => w.id !== id);
     }
 
+    function clearWaitingRoom() {
+        waitingRoom.value = [];
+    }
+
     function setSelectedDate(date: Date) {
         selectedDate.value = date;
     }
@@ -150,6 +154,7 @@ export const useMonitoringStore = defineStore('monitoring', () => {
         updateWaitingRoomRecord,
         addToWaitingRoom,
         removeFromWaitingRoom,
+        clearWaitingRoom,
         setSelectedDate,
         setDailyStatistics,
         updateAppointment,

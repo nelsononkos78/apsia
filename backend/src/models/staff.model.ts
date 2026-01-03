@@ -12,7 +12,8 @@ export enum StaffRole {
     LAB_GENERAL = 'LAB_GENERAL',
     PHARMACY = 'PHARMACY',
     QUOTE_MANAGER = 'QUOTE_MANAGER',
-    COMMERCIAL = 'COMMERCIAL'
+    COMMERCIAL = 'COMMERCIAL',
+    TRIAJE = 'TRIAJE'
 }
 
 @Table({ tableName: 'staff' })

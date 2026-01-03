@@ -8,6 +8,16 @@
             <div class="stats-badges">
                 <span class="badge badge-total">{{ waitingPatients.length }}</span>
                 <span v-if="urgentCount > 0" class="badge badge-urgent">{{ urgentCount }} urgentes</span>
+                <span v-if="pendingTriajeCount > 0" class="badge badge-triaje-summary">{{ pendingTriajeCount }} en triaje</span>
+                <button 
+                    v-if="waitingPatients.length > 0"
+                    @click="markAllAttended" 
+                    class="btn-attend-all"
+                    title="Marcar todos como atendidos"
+                >
+                    <i class="fas fa-check-double"></i>
+                    <span>Atender Todo</span>
+                </button>
             </div>
         </div>
 
@@ -22,10 +32,17 @@
                 </div>
                 <div class="patient-details">
                     <div class="patient-name-row">
-                        <span class="patient-name">{{ record.patient?.name || 'Paciente' }}</span>
+                        <span class="patient-name">{{ record.patient?.firstName }} {{ record.patient?.lastName }}</span>
+                        <span v-if="!record.appointment?.triajeCompleted" class="triaje-pending-badge">
+                            <i class="fas fa-user-nurse"></i> Triaje
+                        </span>
                         <span v-if="record.patient?.medicalRecordNumber" class="medical-record-badge">
                             {{ record.patient.medicalRecordNumber }}
                         </span>
+                    </div>
+                    <div class="doctor-name-row" v-if="record.appointment?.doctor">
+                        <span class="doctor-label">Médico:</span>
+                        <span class="doctor-name">{{ record.appointment.doctor.name }}</span>
                     </div>
                     <div class="patient-meta-row">
                         <span class="meta-item office-badge">
@@ -79,6 +96,10 @@ const urgentCount = computed(() =>
     waitingPatients.value.filter(p => p.priority === 'URGENTE').length
 );
 
+const pendingTriajeCount = computed(() => 
+    waitingPatients.value.filter(p => !p.appointment?.triajeCompleted).length
+);
+
 function calculateWaitTime(checkInTime: string): string {
     const now = new Date();
     const checkIn = new Date(checkInTime);
@@ -109,6 +130,17 @@ async function markAttended(id: number) {
         monitoringStore.removeFromWaitingRoom(id);
     } catch (error) {
         console.error('Error marking patient as attended:', error);
+    }
+}
+
+async function markAllAttended() {
+    if (!confirm('¿Está seguro de que desea marcar a TODOS los pacientes como atendidos?')) return;
+    
+    try {
+        await waitingRoomService.markAllAsAttended();
+        monitoringStore.clearWaitingRoom();
+    } catch (error) {
+        console.error('Error marking all patients as attended:', error);
     }
 }
 </script>
@@ -171,6 +203,50 @@ async function markAttended(id: number) {
 .badge-urgent {
     background: #ffebee;
     color: #c62828;
+}
+
+.badge-triaje-summary {
+    background: #FDE68A;
+    color: #92400E;
+}
+
+.triaje-pending-badge {
+    background: #FDE68A;
+    color: #92400E;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #F59E0B;
+}
+
+.btn-attend-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #5371C4;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.btn-attend-all:hover {
+    background: #223675;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-attend-all i {
+    font-size: 12px;
 }
 
 .patient-list-modern {
@@ -249,6 +325,25 @@ async function markAttended(id: number) {
     font-weight: 600;
     font-family: 'Courier New', monospace;
     border: 1px solid #ddd;
+}
+
+.doctor-name-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: -2px;
+}
+
+.doctor-label {
+    font-size: 10px;
+    color: #78909c;
+    font-weight: 500;
+}
+
+.doctor-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5371C4;
 }
 
 .patient-meta-row {

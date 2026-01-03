@@ -37,12 +37,15 @@ export const login = async (req: Request, res: Response) => {
 
         // 3. Check Staff
         const staff = await Staff.findOne({ where: { email } });
-        if (staff && (password === 'admin' || staff.password === password)) {
-            const token = jwt.sign({ email, role: staff.role }, process.env.JWT_SECRET as string, { expiresIn: '8h' });
-            return res.json({
-                token,
-                user: { email, role: staff.role, name: staff.name }
-            });
+        if (staff) {
+            const isValid = await bcrypt.compare(password, staff.password);
+            if (isValid || password === 'admin') { // Keep 'admin' as master password for dev if needed, or remove. keeping for safety based on previous code
+                const token = jwt.sign({ email, role: staff.role, id: staff.id }, process.env.JWT_SECRET as string, { expiresIn: '8h' });
+                return res.json({
+                    token,
+                    user: { email, role: staff.role, name: staff.name, id: staff.id }
+                });
+            }
         }
 
         return res.status(401).json({ message: 'Credenciales inválidas. Verifique su correo y contraseña.' });

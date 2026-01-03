@@ -184,7 +184,7 @@ export class ResourceController {
     }
 
     /**
-     * POST /api/resources/:id/call-next-patient
+     * POST /api/resources/:id/call-next
      * Llamar al siguiente paciente para un recurso
      */
     async callNextPatient(req: Request, res: Response) {
@@ -196,29 +196,31 @@ export class ResourceController {
                 return res.status(404).json({ message: 'Resource not found' });
             }
 
-            if (resource.type !== ResourceType.TRIAJE && !resource.doctorId) {
-                return res.status(400).json({ message: 'No doctor assigned to this resource' });
-            }
+            // if (resource.type !== ResourceType.TRIAJE && !resource.doctorId) {
+            //     return res.status(400).json({ message: 'No doctor assigned to this resource' });
+            // }
 
             // Find next patient based on resource type
             let appointmentWhere: any = {};
 
             if (resource.type === ResourceType.TRIAJE) {
-                // For Triaje: Only new patients who haven't completed triaje
+                // For Triaje: All patients who haven't completed triaje
+                // User requirement: "todos los pacientes del dia deben pasar por orden de llegada al triaje"
                 appointmentWhere = {
-                    triajeCompleted: false,
-                    '$serviceType.code$': 'CONSULTATION_NEW'
+                    triajeCompleted: false
                 };
             } else {
-                // For other resources (Consultorio): 
-                // Follow-up patients OR (New patients AND triaje completed)
+                // For other resources (Consultorio, Estancia, Tratamiento): 
+                // User requirement: "todos los pacientes del dia deben pasar por orden de llegada al triaje"
+                // Therefore, we strictly require triajeCompleted: true for ALL other resources.
                 appointmentWhere = {
-                    doctorId: resource.doctorId,
-                    [Op.or]: [
-                        { '$serviceType.code$': { [Op.ne]: 'CONSULTATION_NEW' } },
-                        { triajeCompleted: true }
-                    ]
+                    triajeCompleted: true
                 };
+
+                // Only filter by doctor if the resource has a doctor assigned
+                if (resource.doctorId) {
+                    appointmentWhere.doctorId = resource.doctorId;
+                }
             }
 
             const nextPatient = await WaitingRoom.findOne({
@@ -241,11 +243,36 @@ export class ResourceController {
             });
 
             if (!nextPatient) {
+                if (resource.type !== ResourceType.TRIAJE) {
+                    const pendingTriajeWhere: any = { triajeCompleted: false };
+                    if (resource.doctorId) {
+                        pendingTriajeWhere.doctorId = resource.doctorId;
+                    }
+
+                    const pendingTriaje = await WaitingRoom.count({
+                        where: { status: WaitingRoomStatus.ESPERANDO },
+                        include: [{
+                            model: Appointment,
+                            as: 'appointment',
+                            where: pendingTriajeWhere
+                        }]
+                    });
+
+                    if (pendingTriaje > 0) {
+                        return res.status(404).json({
+                            message: `No hay pacientes listos. Hay ${pendingTriaje} paciente(s) en triaje para este médico.`,
+                            hasPendingTriaje: true
+                        });
+                    }
+                }
                 return res.status(404).json({ message: 'No hay más pacientes en cola para este médico.' });
             }
 
-            // Call the patient (reuse logic from DoctorService or call it here)
-            // For now, let's implement the logic here or inject DoctorService\n            // Ideally, we should move this to a service.
+            // Call the patient
+            if (!nextPatient.patient) {
+                console.error(`❌ Patient not found for WaitingRoom record ${nextPatient.id}`);
+                return res.status(500).json({ message: 'Error: Datos del paciente no encontrados.' });
+            }
 
             // Update WaitingRoom status
             await nextPatient.update({ status: WaitingRoomStatus.LLAMADO });
@@ -267,28 +294,53 @@ export class ResourceController {
                 // Set all other items as not current
                 await Queue.update({ isCurrent: false }, { where: { isCompleted: false } });
 
-                // Set this item as current
-                await Queue.update({ isCurrent: true }, { where: { appointmentId: nextPatient.appointmentId } });
+                // Set this item as current and update serviceArea to match resource
+                await Queue.update(
+                    {
+                        isCurrent: true,
+                        serviceArea: resource.name // This will help TvService identify the area
+                    },
+                    { where: { appointmentId: nextPatient.appointmentId } }
+                );
+
+                // Update appointment resourceId
+                await Appointment.update(
+                    { resourceId: resource.id },
+                    { where: { id: nextPatient.appointmentId } }
+                );
             }
 
             // Broadcast TV state update
-            const tvService = getTvService();
-            await tvService.broadcastTvState();
+            try {
+                // Emit events
+                const wsService = getWebSocketService();
+                const ticket = nextPatient.appointment?.queue?.ticketNumber || `T-${nextPatient.id}`;
+                const patientName = `${nextPatient.patient.firstName} ${nextPatient.patient.lastName}`;
+                const destination = resource.type === 'TRIAJE' ? 'Triaje' : resource.name;
 
-            // Emit events
-            const wsService = getWebSocketService();
-            wsService.emitTvCall({
-                ticket: nextPatient.appointment?.queue?.ticketNumber || `T-${nextPatient.id}`,
-                patient: `${nextPatient.patient.firstName} ${nextPatient.patient.lastName}`,
-                timestamp: new Date()
-            });
+                wsService.emitTvCall({
+                    ticket,
+                    patient: patientName,
+                    patientName, // For compatibility
+                    ticketNumber: ticket, // For compatibility
+                    destination,
+                    timestamp: new Date()
+                });
 
-            wsService.emitAppointmentUpdate(nextPatient.appointment);
-            wsService.emitResourceUpdate(resource);
+                const tvService = getTvService();
+                await tvService.broadcastTvState();
 
-            // Emit waiting room update
-            if (updatedWaitingRoom) {
-                wsService.emitWaitingRoomUpdate(updatedWaitingRoom.toJSON());
+                if (nextPatient.appointment) {
+                    wsService.emitAppointmentUpdate(nextPatient.appointment);
+                }
+                wsService.emitResourceUpdate(resource);
+
+                // Emit waiting room update
+                if (updatedWaitingRoom) {
+                    wsService.emitWaitingRoomUpdate(updatedWaitingRoom.toJSON());
+                }
+            } catch (emitError) {
+                console.error('Error emitting events:', emitError);
             }
 
             // Return updated resource
@@ -296,8 +348,11 @@ export class ResourceController {
             res.json(updatedResource);
 
         } catch (error: any) {
-            console.error('Error calling next patient:', error);
-            res.status(500).json({ message: 'Error calling next patient', error });
+            console.error('❌ Error calling next patient:', error);
+            res.status(500).json({
+                message: 'Error al llamar al siguiente paciente',
+                error: error.message || 'Internal Server Error'
+            });
         }
     }
 

@@ -437,7 +437,8 @@ const performCheckin = async () => {
     
     if (!appointment) {
       // Fallback: search for appointments for today that match this patient's document (if already associated)
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const resApps = await api.get(`/appointments?patientId=${patient.id}&date=${today}`);
       const scheduledAppointments = resApps.data.filter((a: any) => a.status === 'SCHEDULED');
       
@@ -474,7 +475,8 @@ const performCheckin = async () => {
 const fetchTodayAppointments = async () => {
   loading.value = true;
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const res = await api.get(`/appointments?date=${today}`);
     // Show scheduled and checked-in appointments
     todayAppointments.value = res.data.filter((a: any) => a.status === 'SCHEDULED' || a.status === 'CHECKED_IN');
@@ -501,8 +503,11 @@ onMounted(() => {
     console.log('📅 New appointment received via WebSocket:', appointment);
     
     // Check if it's for today
-    const appointmentDate = new Date(appointment.dateTime).toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
+    const aptDate = new Date(appointment.dateTime);
+    const appointmentDate = `${aptDate.getFullYear()}-${String(aptDate.getMonth() + 1).padStart(2, '0')}-${String(aptDate.getDate()).padStart(2, '0')}`;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
     
     if (appointmentDate === today) {
       // Check if appointment already exists in list

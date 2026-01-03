@@ -22,6 +22,7 @@ import internalFlowRoutes from './routes/internal-flow.routes';
 import checkinRoutes from './routes/checkin.routes';
 import serviceTypeRoutes from './routes/service-type.routes';
 import doctorRoutes from './routes/doctor.routes';
+import physicalExamRoutes from './routes/physical-exam.routes';
 // import ocrRoutes from './routes/ocr.routes';
 
 
@@ -52,6 +53,7 @@ app.use('/api/internal', internalFlowRoutes);
 app.use('/api/checkin', checkinRoutes);
 app.use('/api/service-types', serviceTypeRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/physical-exam', physicalExamRoutes);
 // app.use('/api/ocr', ocrRoutes);
 
 app.get('/', (req: Request, res: Response) => {

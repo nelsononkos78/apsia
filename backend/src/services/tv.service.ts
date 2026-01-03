@@ -34,16 +34,34 @@ export class TvService {
         // 1. Determine "Turno Actual" (The most recently called/updated item that isCurrent=true)
         const currentCall = queueItems.find(item => item.isCurrent);
 
-        // Determine specific area name (e.g., Consultorio 1)
-        let currentAreaName = currentCall ? this.formatServiceName(currentCall.serviceArea) : '';
+        // Determine specific area name
+        let currentAreaName = '';
 
-        if (currentCall && currentCall.appointment?.doctorId) {
-            const resource = await Resource.findOne({
-                where: { doctorId: currentCall.appointment.doctorId }
-            });
-            if (resource) {
-                currentAreaName = resource.name;
+        if (currentCall) {
+            // Priority 1: Direct Resource assigned to Appointment
+            if (currentCall.appointment?.resourceId) {
+                const resource = await Resource.findByPk(currentCall.appointment.resourceId);
+                if (resource) {
+                    currentAreaName = resource.type === 'TRIAJE' ? 'Triaje' : resource.name;
+                }
             }
+
+            // Priority 2: Fallback to doctor's resource if no direct resource
+            if (!currentAreaName && currentCall.appointment?.doctorId) {
+                const resource = await Resource.findOne({
+                    where: { doctorId: currentCall.appointment.doctorId }
+                });
+                if (resource) {
+                    currentAreaName = resource.name;
+                }
+            }
+
+            // Priority 3: Fallback to service area name
+            if (!currentAreaName) {
+                currentAreaName = this.formatServiceName(currentCall.serviceArea);
+            }
+
+            console.log(`📺 TV State: Current Call ${currentCall.ticketNumber} -> Area: ${currentAreaName} (from ${currentCall.serviceArea})`);
         }
 
         // 2. Get Waiting Room Patients (those physically in the clinic but not yet called)

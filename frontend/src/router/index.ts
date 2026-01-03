@@ -47,6 +47,11 @@ const router = createRouter({
             path: '/doctor/dashboard',
             name: 'doctor-dashboard',
             component: () => import('../views/DoctorDashboard.vue')
+        },
+        {
+            path: '/triage',
+            name: 'triage',
+            component: () => import('../views/TriageDashboard.vue')
         }
     ]
 })

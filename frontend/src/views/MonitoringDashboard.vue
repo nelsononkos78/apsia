@@ -163,7 +163,11 @@ onMounted(async () => {
     });
     
     websocketService.on('waitingRoom:updated', (record: any) => {
-        monitoringStore.updateWaitingRoomRecord(record);
+        if (record.bulk) {
+            monitoringStore.clearWaitingRoom();
+        } else {
+            monitoringStore.updateWaitingRoomRecord(record);
+        }
     });
     
     websocketService.on('waitingRoom:added', (record: any) => {

@@ -83,7 +83,7 @@ export class WebSocketService {
      * Emitir actualización de estado de TV
      */
     emitTvStateUpdate(state: any) {
-        this.io.to('monitoring').emit('tv:state-updated', state);
+        this.io.emit('tv:state-updated', state);
     }
 
     /**

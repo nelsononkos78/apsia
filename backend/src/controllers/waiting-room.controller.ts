@@ -160,4 +160,17 @@ export class WaitingRoomController {
             res.status(500).json({ error: error.message });
         }
     }
+
+    /**
+     * POST /api/waiting-room/attend-all
+     * Marcar todos los pacientes como atendidos
+     */
+    async markAllAsAttended(req: Request, res: Response) {
+        try {
+            await waitingRoomService.markAllAsAttended();
+            res.json({ message: 'Todos los pacientes han sido marcados como atendidos' });
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
 }

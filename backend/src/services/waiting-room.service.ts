@@ -34,7 +34,7 @@ export class WaitingRoomService {
                 },
                 {
                     model: Appointment,
-                    include: ['serviceType']
+                    include: ['serviceType', 'doctor']
                 }
             ]
         });
@@ -71,7 +71,7 @@ export class WaitingRoomService {
                 },
                 {
                     model: Appointment,
-                    include: ['serviceType']
+                    include: ['serviceType', 'doctor']
                 }
             ],
             order: [
@@ -92,7 +92,7 @@ export class WaitingRoomService {
                 },
                 {
                     model: Appointment,
-                    include: ['serviceType']
+                    include: ['serviceType', 'doctor']
                 }
             ],
             order: [['checkInTime', 'DESC']]
@@ -119,7 +119,7 @@ export class WaitingRoomService {
                 },
                 {
                     model: Appointment,
-                    include: ['serviceType']
+                    include: ['serviceType', 'doctor']
                 }
             ]
         });
@@ -160,10 +160,6 @@ export class WaitingRoomService {
             await Queue.update({ isCurrent: true }, { where: { appointmentId: record.appointmentId } });
         }
 
-        // Broadcast TV state
-        const tvService = getTvService();
-        await tvService.broadcastTvState();
-
         // Emit specific TV call event
         try {
             const wsService = getWebSocketService();
@@ -172,20 +168,32 @@ export class WaitingRoomService {
                     { model: Patient },
                     {
                         model: Appointment,
-                        include: [Queue]
+                        include: [Queue, 'doctor']
                     }
                 ]
             });
             if (recordWithData) {
+                const ticket = recordWithData.appointment?.queue?.ticketNumber || '---';
+                const patientName = recordWithData.patient ? `${recordWithData.patient.firstName} ${recordWithData.patient.lastName}` : '';
+
+                console.log(`🔔 Emitting tv:call for ticket ${ticket} (${patientName})`);
+
                 wsService.emitTvCall({
-                    ticket: recordWithData.appointment?.queue?.ticketNumber || '---',
-                    patient: recordWithData.patient ? `${recordWithData.patient.firstName} ${recordWithData.patient.lastName}` : '',
+                    ticket,
+                    patient: patientName,
+                    patientName, // Compatibility
+                    ticketNumber: ticket, // Compatibility
+                    destination: 'Sala de Espera',
                     timestamp: new Date()
                 });
             }
         } catch (error) {
             console.error('❌ Error emitting tv:call:', error);
         }
+
+        // Broadcast TV state
+        const tvService = getTvService();
+        await tvService.broadcastTvState();
 
         // Emit standard waiting room update
         await this.updatePatientStatus(id, WaitingRoomStatus.LLAMADO);
@@ -283,5 +291,40 @@ export class WaitingRoomService {
         }, 0);
 
         return Math.round(totalWaitTime / attendedRecords.length);
+    }
+
+    /**
+     * Marcar todos los pacientes en espera como atendidos
+     */
+    async markAllAsAttended(): Promise<void> {
+        const waitingRecords = await WaitingRoom.findAll({
+            where: {
+                status: [WaitingRoomStatus.ESPERANDO, WaitingRoomStatus.LLAMADO]
+            }
+        });
+
+        for (const record of waitingRecords) {
+            record.status = WaitingRoomStatus.ATENDIDO;
+            await record.save();
+
+            if (record.appointmentId) {
+                await Queue.update(
+                    { isCompleted: true, isCurrent: false },
+                    { where: { appointmentId: record.appointmentId } }
+                );
+            }
+        }
+
+        // Broadcast TV state and notify clients
+        try {
+            const tvService = getTvService();
+            await tvService.broadcastTvState();
+
+            const wsService = getWebSocketService();
+            // Emit a general update event to refresh the list on all clients
+            wsService.emitWaitingRoomUpdate({ bulk: true } as any);
+        } catch (error) {
+            console.error('❌ Error in bulk update broadcast:', error);
+        }
     }
 }

@@ -96,7 +96,7 @@ const calendarDays = computed((): CalendarDay[] => {
     const current = new Date(startDate);
     
     while (current <= endDate) {
-        const dateKey = current.toISOString().split('T')[0];
+        const dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
         const occupancy = occupancyData.value[dateKey] || { count: 0, level: 'low', appointments: [] };
         
         days.push({
@@ -124,7 +124,8 @@ function nextMonth() {
 
 function handleDayClick(day: CalendarDay) {
     if (day.appointmentCount > 0) {
-        const dateKey = day.date.toISOString().split('T')[0];
+        const d = day.date;
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const dayData = occupancyData.value[dateKey];
         if (dayData && dayData.appointments) {
             modalDate.value = day.date;
@@ -162,7 +163,8 @@ async function loadAppointmentCounts() {
         // Count appointments by day and store appointment data
         const dataByDate: Record<string, any[]> = {};
         appointments.forEach((apt: any) => {
-            const dateKey = new Date(apt.dateTime).toISOString().split('T')[0];
+            const aptDate = new Date(apt.dateTime);
+            const dateKey = `${aptDate.getFullYear()}-${String(aptDate.getMonth() + 1).padStart(2, '0')}-${String(aptDate.getDate()).padStart(2, '0')}`;
             if (!dataByDate[dateKey]) {
                 dataByDate[dateKey] = [];
             }

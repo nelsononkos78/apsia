@@ -168,20 +168,26 @@ const handleTvCall = (data: any) => {
 onMounted(() => {
   updateClock(); // Start clock
   fetchState();
+  
+  // Join monitoring room to ensure receiving updates
+  websocketService.joinMonitoring();
+  
   websocketService.on('tv:state-updated', handleTvUpdate);
   websocketService.on('tv:call', handleTvCall);
   initYouTubeAPI();
-  
-  // Try to "prime" the audio context
-  notificationAudio.volume = 0;
-  notificationAudio.play().then(() => {
-    console.log('✅ Audio context primed');
-    notificationAudio.pause();
-    notificationAudio.volume = 1;
-  }).catch(() => {
-    console.log('🔇 Audio context priming failed (expected without user interaction)');
-    notificationAudio.volume = 1;
-  });
+
+  // Global click listener to unlock audio context (standard browser requirement)
+  const unlockAudio = () => {
+    console.log('🖱️ User interaction detected, unlocking audio context...');
+    notificationAudio.play().then(() => {
+      notificationAudio.pause();
+      notificationAudio.currentTime = 0;
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    }).catch(e => console.warn('Audio unlock failed:', e));
+  };
+  window.addEventListener('click', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
 });
 
 onUnmounted(() => {
@@ -198,7 +204,6 @@ onUnmounted(() => {
     <GlobalHeader :logo="logo3" hideTitle dark logoHeight="60px" fullWidth>
       <template #actions>
         <div class="flex items-center gap-[4vmin]">
-          <button @click="playNotificationSound" class="opacity-0 hover:opacity-100 text-[1vmin] bg-gray-700 p-1 rounded">Test Sound</button>
           <div class="flex items-center gap-[1.5vmin] text-gray-400 text-[2.5vmin] font-medium">
             <i class="far fa-calendar-alt"></i>
             <span>{{ currentDate }}</span>

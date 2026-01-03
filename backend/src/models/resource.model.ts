@@ -2,6 +2,7 @@ import { Table, Column, Model, DataType, ForeignKey, BelongsTo, CreatedAt, Updat
 import { Patient } from './patient.model';
 import { Doctor } from './doctor.model';
 import { Appointment } from './appointment.model';
+import { Staff } from './staff.model';
 
 export enum ResourceType {
     CONSULTORIO = 'CONSULTORIO',
@@ -77,6 +78,13 @@ export class Resource extends Model {
 
     @BelongsTo(() => Appointment)
     currentAppointment!: Appointment | null;
+
+    @ForeignKey(() => Staff)
+    @Column({ type: DataType.INTEGER, allowNull: true })
+    staffId!: number | null;
+
+    @BelongsTo(() => Staff)
+    staff!: Staff | null;
 
     @CreatedAt
     createdAt!: Date;
