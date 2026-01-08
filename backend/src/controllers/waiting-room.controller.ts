@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { WaitingRoomService } from '../services/waiting-room.service';
+import { NoShowService } from '../services/noshow.service';
 import { WaitingRoomPriority, WaitingRoomStatus } from '../models/waiting-room.model';
 
 const waitingRoomService = new WaitingRoomService();
@@ -120,6 +121,23 @@ export class WaitingRoomController {
             res.json(record);
         } catch (error: any) {
             if (error.message === 'Registro no encontrado') {
+                return res.status(404).json({ error: error.message });
+            }
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    /**
+     * POST /api/waiting-room/:id/no-show
+     * Marcar paciente como No Show (se retiró)
+     */
+    async markAsNoShow(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const record = await NoShowService.markManualNoShow(parseInt(id));
+            res.json(record);
+        } catch (error: any) {
+            if (error.message === 'Registro de sala de espera no encontrado') {
                 return res.status(404).json({ error: error.message });
             }
             res.status(500).json({ error: error.message });

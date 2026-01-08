@@ -53,6 +53,13 @@ export class InternalFlowService {
         quote.status = QuoteStatus.APPROVED;
         await quote.save();
 
+        try {
+            const { getWebSocketService } = require('./websocket.service');
+            getWebSocketService().emitDashboardUpdate();
+        } catch (error) {
+            console.error('Error emitting dashboard update from internal flow:', error);
+        }
+
         return quote;
     }
 

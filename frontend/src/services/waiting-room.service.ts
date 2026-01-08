@@ -85,6 +85,14 @@ export class WaitingRoomService {
     }
 
     /**
+     * Marcar paciente como No Show
+     */
+    async markAsNoShow(id: number): Promise<WaitingRoomRecord> {
+        const response = await api.post(`/waiting-room/${id}/no-show`);
+        return response.data;
+    }
+
+    /**
      * Remover paciente de la sala de espera
      */
     async removePatient(id: number): Promise<void> {

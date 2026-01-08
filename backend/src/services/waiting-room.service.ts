@@ -61,6 +61,10 @@ export class WaitingRoomService {
      * Obtener lista actual de espera
      */
     async getCurrentWaitingList(): Promise<WaitingRoom[]> {
+        // Limpieza reactiva de citas antiguas
+        const { NoShowService } = require('./noshow.service');
+        await NoShowService.cleanupOldAppointments();
+
         return await WaitingRoom.findAll({
             where: {
                 status: WaitingRoomStatus.ESPERANDO

@@ -55,6 +55,15 @@
                         </span>
                     </div>
                 </div>
+                <div class="patient-actions">
+                    <button 
+                        @click="markNoShow(record.id)" 
+                        class="action-icon-btn no-show-btn" 
+                        title="No Show (se retiró)"
+                    >
+                        <i class="fas fa-user-slash"></i>
+                    </button>
+                </div>
             </div>
 
             <div v-if="waitingPatients.length === 0" class="empty-state-modern">
@@ -130,6 +139,16 @@ async function markAttended(id: number) {
         monitoringStore.removeFromWaitingRoom(id);
     } catch (error) {
         console.error('Error marking patient as attended:', error);
+    }
+}
+
+async function markNoShow(id: number) {
+    if (!confirm('¿Marcar a este paciente como No Show (se retiró)?')) return;
+    try {
+        await waitingRoomService.markAsNoShow(id);
+        monitoringStore.removeFromWaitingRoom(id);
+    } catch (error) {
+        console.error('Error marking patient as No Show:', error);
     }
 }
 
@@ -398,9 +417,13 @@ async function markAllAttended() {
 }
 
 .action-icon-btn:hover {
-    background: #00bcd4;
+    background: #5371C4;
     color: white;
     transform: scale(1.1);
+}
+
+.no-show-btn:hover {
+    background: #f44336 !important;
 }
 
 .empty-state-modern {

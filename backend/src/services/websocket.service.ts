@@ -25,16 +25,35 @@ export class WebSocketService {
                 console.log(`Client ${socket.id} joined monitoring room`);
             });
 
+            // Join dashboard room
+            socket.on('join:dashboard', () => {
+                socket.join('dashboard');
+                console.log(`Client ${socket.id} joined dashboard room`);
+            });
+
             // Leave monitoring room
             socket.on('leave:monitoring', () => {
                 socket.leave('monitoring');
                 console.log(`Client ${socket.id} left monitoring room`);
             });
 
+            // Leave dashboard room
+            socket.on('leave:dashboard', () => {
+                socket.leave('dashboard');
+                console.log(`Client ${socket.id} left dashboard room`);
+            });
+
             socket.on('disconnect', () => {
                 console.log(`Client disconnected: ${socket.id}`);
             });
         });
+    }
+
+    /**
+     * Emitir actualización del dashboard administrativo
+     */
+    emitDashboardUpdate() {
+        this.io.to('dashboard').emit('dashboard:updated');
     }
 
     /**

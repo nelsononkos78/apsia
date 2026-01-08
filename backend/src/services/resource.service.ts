@@ -185,9 +185,23 @@ export class ResourceService {
         // and return the patient to the waiting room
         if (resource.type === ResourceType.TRIAJE && resource.currentAppointmentId) {
             await Appointment.update(
-                { triajeCompleted: true },
+                {
+                    triajeCompleted: true,
+                    resourceId: null // Liberar el recurso de la cita
+                },
                 { where: { id: resource.currentAppointmentId } }
             );
+
+            // Emit appointment update
+            try {
+                const wsService = getWebSocketService();
+                const updatedAppt = await Appointment.findByPk(resource.currentAppointmentId);
+                if (updatedAppt) {
+                    wsService.emitAppointmentUpdate(updatedAppt.toJSON());
+                }
+            } catch (e) {
+                console.error('Error emitting appointment update:', e);
+            }
 
             // Return to waiting room
             const waitingRecord = await WaitingRoom.findOne({
@@ -217,8 +231,28 @@ export class ResourceService {
 
             // Also mark appointment as COMPLETED if it was IN_PROGRESS
             await Appointment.update(
-                { status: AppointmentStatus.COMPLETED },
+                {
+                    status: AppointmentStatus.COMPLETED,
+                    resourceId: null // Liberar el recurso de la cita
+                },
                 { where: { id: resource.currentAppointmentId, status: AppointmentStatus.IN_PROGRESS } }
+            );
+
+            // Emit appointment update
+            try {
+                const wsService = getWebSocketService();
+                const updatedAppt = await Appointment.findByPk(resource.currentAppointmentId);
+                if (updatedAppt) {
+                    wsService.emitAppointmentUpdate(updatedAppt.toJSON());
+                }
+            } catch (e) {
+                console.error('Error emitting appointment update:', e);
+            }
+        } else if (resource.currentAppointmentId) {
+            // For any other resource type, just clear the resourceId from appointment
+            await Appointment.update(
+                { resourceId: null },
+                { where: { id: resource.currentAppointmentId } }
             );
         }
 

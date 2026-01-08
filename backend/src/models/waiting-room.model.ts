@@ -5,7 +5,8 @@ import { Appointment } from './appointment.model';
 export enum WaitingRoomStatus {
     ESPERANDO = 'ESPERANDO',
     LLAMADO = 'LLAMADO',
-    ATENDIDO = 'ATENDIDO'
+    ATENDIDO = 'ATENDIDO',
+    NO_SHOW = 'NO_SHOW'
 }
 
 export enum WaitingRoomPriority {

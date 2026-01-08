@@ -107,6 +107,18 @@
                                         :staffId="user.id"
                                     />
                                 </div>
+                                <div v-else-if="activeTab === 'DIAGNOSTICO'" class="diagnosis-tab">
+                                    <div class="diagnosis-inputs">
+                                        <div class="input-field">
+                                            <label>Código CIE10</label>
+                                            <input v-model="diagnosisCode" placeholder="Ej: C50.9" class="cie-input" />
+                                        </div>
+                                        <div class="input-field">
+                                            <label>Descripción del Diagnóstico</label>
+                                            <textarea v-model="diagnosisDescription" placeholder="Describa el diagnóstico..." class="diag-textarea"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div v-else class="textarea-wrapper">
                                     <textarea 
                                         v-model="clinicalNotes[activeTab]" 
@@ -208,11 +220,14 @@ const currentDate = ref('');
 const consultationSeconds = ref(0);
 const consultationTimer = ref<number | null>(null);
 
-const TABS = ['ANAMNESIS', 'EXAMEN FISICO', 'EVOLUCION', 'INTERCONSULTA', 'Nº EMERGENCIA'];
+const TABS = ['ANAMNESIS', 'EXAMEN FISICO', 'EVOLUCION', 'INTERCONSULTA', 'Nº EMERGENCIA', 'DIAGNOSTICO'];
 const activeTab = ref(TABS[0]);
 const clinicalNotes = ref<Record<string, string>>(
     TABS.reduce((acc, tab) => ({ ...acc, [tab]: '' }), {})
 );
+
+const diagnosisCode = ref('');
+const diagnosisDescription = ref('');
 
 const sortedWaitingList = computed(() => {
     return [...waitingList.value].sort((a, b) => {
@@ -358,12 +373,28 @@ async function startConsultation() {
 async function finishConsultation() {
     if (!currentAppointment.value) return;
     try {
+        const medicalRecord = {
+            anamnesis: clinicalNotes.value['ANAMNESIS'],
+            physicalExam: clinicalNotes.value['EXAMEN FISICO'],
+            evolution: clinicalNotes.value['EVOLUCION'],
+            interconsultation: clinicalNotes.value['INTERCONSULTA'],
+            emergencyNumber: clinicalNotes.value['Nº EMERGENCIA'],
+            diagnosisCode: diagnosisCode.value,
+            diagnosisDescription: diagnosisDescription.value
+        };
+
         await api.post('/doctors/finish', {
             doctorId: doctor.value.id,
-            appointmentId: currentAppointment.value.id
+            appointmentId: currentAppointment.value.id,
+            medicalRecord
         });
         currentPatient.value = null;
         currentAppointment.value = null;
+        diagnosisCode.value = '';
+        diagnosisDescription.value = '';
+        // Reset clinical notes
+        TABS.forEach(tab => clinicalNotes.value[tab] = '');
+        
         stopTimer();
         consultationSeconds.value = 0;
         loadDashboard();

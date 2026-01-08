@@ -22,6 +22,9 @@ router.post('/:id/call', waitingRoomController.callPatient.bind(waitingRoomContr
 // Marcar como atendido
 router.post('/:id/attend', waitingRoomController.markAsAttended.bind(waitingRoomController));
 
+// Marcar como No Show (se retiró)
+router.post('/:id/no-show', waitingRoomController.markAsNoShow.bind(waitingRoomController));
+
 // Marcar todos como atendidos
 router.post('/attend-all', waitingRoomController.markAllAsAttended.bind(waitingRoomController));
 

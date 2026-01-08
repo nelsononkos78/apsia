@@ -53,12 +53,12 @@ export class DoctorController {
 
     async finishConsultation(req: Request, res: Response) {
         try {
-            const { doctorId, appointmentId } = req.body;
+            const { doctorId, appointmentId, medicalRecord } = req.body;
             if (!doctorId || !appointmentId) {
                 return res.status(400).json({ error: 'Doctor ID and Appointment ID are required' });
             }
 
-            const result = await doctorService.finishConsultation(doctorId, appointmentId);
+            const result = await doctorService.finishConsultation(doctorId, appointmentId, medicalRecord);
             res.json(result);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

@@ -8,6 +8,7 @@ export * from './doctor.model';
 export * from './quote.model';
 export * from './recipe.model';
 export * from './procedure-order.model';
+export * from './medical-record.model';
 export * from './resource.model';
 export * from './physical-exam.model';
 export * from './allergy.model';

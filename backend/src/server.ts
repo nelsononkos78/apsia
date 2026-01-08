@@ -22,6 +22,7 @@ import internalFlowRoutes from './routes/internal-flow.routes';
 import checkinRoutes from './routes/checkin.routes';
 import serviceTypeRoutes from './routes/service-type.routes';
 import doctorRoutes from './routes/doctor.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 import physicalExamRoutes from './routes/physical-exam.routes';
 // import ocrRoutes from './routes/ocr.routes';
 
@@ -53,6 +54,7 @@ app.use('/api/internal', internalFlowRoutes);
 app.use('/api/checkin', checkinRoutes);
 app.use('/api/service-types', serviceTypeRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/physical-exam', physicalExamRoutes);
 // app.use('/api/ocr', ocrRoutes);
 
@@ -83,6 +85,16 @@ const startServer = async () => {
             const { initializeWebSocket } = require('./services/websocket.service');
             initializeWebSocket(httpServer);
             console.log('WebSocket initialized.');
+
+            // Tarea programada para las 11 PM (No Show)
+            const { NoShowService } = require('./services/noshow.service');
+            setInterval(() => {
+                const now = new Date();
+                if (now.getHours() === 23 && now.getMinutes() === 0) {
+                    console.log('[Cron] Iniciando proceso diario de No Show...');
+                    NoShowService.processDailyNoShows();
+                }
+            }, 60000); // Revisar cada minuto
         });
     } catch (error) {
         console.error('Unable to connect to the database:', error);

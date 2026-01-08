@@ -5,6 +5,7 @@ import { Appointment, AppointmentStatus } from '../models/appointment.model';
 import { Patient } from '../models/patient.model';
 import { ServiceType } from '../models/service-type.model';
 import { Queue } from '../models/queue.model';
+import { MedicalRecord } from '../models/medical-record.model';
 import { getWebSocketService } from './websocket.service';
 import { getTvService } from './tv.service';
 import { Op } from 'sequelize';
@@ -287,7 +288,7 @@ export class DoctorService {
         return appointment;
     }
 
-    async finishConsultation(doctorId: number, appointmentId: number) {
+    async finishConsultation(doctorId: number, appointmentId: number, medicalRecordData?: any) {
         const appointment = await Appointment.findByPk(appointmentId);
         if (!appointment) {
             throw new Error('Appointment not found');
@@ -295,6 +296,22 @@ export class DoctorService {
 
         appointment.status = AppointmentStatus.COMPLETED;
         await appointment.save();
+
+        // Save Medical Record if provided
+        if (medicalRecordData) {
+            await MedicalRecord.create({
+                patientId: appointment.patientId,
+                doctorId: appointment.doctorId,
+                appointmentId: appointment.id,
+                anamnesis: medicalRecordData.anamnesis,
+                physicalExam: medicalRecordData.physicalExam,
+                evolution: medicalRecordData.evolution,
+                interconsultation: medicalRecordData.interconsultation,
+                emergencyNumber: medicalRecordData.emergencyNumber,
+                diagnosisCode: medicalRecordData.diagnosisCode,
+                diagnosisDescription: medicalRecordData.diagnosisDescription
+            });
+        }
 
         // Update Queue status
         await Queue.update(
@@ -331,6 +348,7 @@ export class DoctorService {
         await getTvService().broadcastTvState();
 
         getWebSocketService().emitAppointmentUpdate(appointment.toJSON());
+        getWebSocketService().emitDashboardUpdate();
 
         return appointment;
     }

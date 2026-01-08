@@ -47,6 +47,7 @@ export const createAppointment = async (req: Request, res: Response) => {
             if (appointmentWithData) {
                 wsService.emitAppointmentUpdate(appointmentWithData.toJSON());
             }
+            wsService.emitDashboardUpdate();
         } catch (wsError) {
             console.error('WebSocket emission failed:', wsError);
         }
@@ -80,6 +81,13 @@ export const checkInAppointment = async (req: Request, res: Response) => {
         appointment.status = AppointmentStatus.CHECKED_IN;
         appointment.checkinTime = new Date();
         await appointment.save();
+
+        // Emit WebSocket event for dashboard update
+        try {
+            getWebSocketService().emitDashboardUpdate();
+        } catch (wsError) {
+            console.error('WebSocket emission failed for dashboard update after check-in:', wsError);
+        }
 
         // Add to Queue
         // In a real app, we would determine service area based on appointment type
