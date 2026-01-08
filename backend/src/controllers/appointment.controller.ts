@@ -80,6 +80,13 @@ export const checkInAppointment = async (req: Request, res: Response) => {
 
         appointment.status = AppointmentStatus.CHECKED_IN;
         appointment.checkinTime = new Date();
+
+        // Auto-mark triajeCompleted for services that don't require triage
+        // Only CONSULTATION_NEW requires triage
+        if (appointment.serviceType?.code !== 'CONSULTATION_NEW') {
+            appointment.triajeCompleted = true;
+        }
+
         await appointment.save();
 
         // Emit WebSocket event for dashboard update

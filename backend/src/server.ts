@@ -86,8 +86,15 @@ const startServer = async () => {
             initializeWebSocket(httpServer);
             console.log('WebSocket initialized.');
 
-            // Tarea programada para las 11 PM (No Show)
+            // Cleanup old appointments on startup
             const { NoShowService } = require('./services/noshow.service');
+            console.log('[Startup] Ejecutando limpieza de citas antiguas...');
+            NoShowService.cleanupOldAppointments().then((count: number) => {
+                console.log(`[Startup] Limpieza completada: ${count} citas marcadas como NO_SHOW.`);
+            });
+
+            // Tarea programada para las 11 PM (No Show)
+            // Ejecuta el proceso diario para marcar citas pendientes del día como NO_SHOW
             setInterval(() => {
                 const now = new Date();
                 if (now.getHours() === 23 && now.getMinutes() === 0) {
@@ -95,6 +102,12 @@ const startServer = async () => {
                     NoShowService.processDailyNoShows();
                 }
             }, 60000); // Revisar cada minuto
+
+            // Ejecutar limpieza de citas antiguas cada hora
+            setInterval(() => {
+                console.log('[Cron] Ejecutando limpieza de citas antiguas...');
+                NoShowService.cleanupOldAppointments();
+            }, 3600000); // Cada hora (3600000 ms)
         });
     } catch (error) {
         console.error('Unable to connect to the database:', error);

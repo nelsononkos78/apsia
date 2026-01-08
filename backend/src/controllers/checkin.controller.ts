@@ -127,7 +127,10 @@ export class CheckinController {
                 dateTime: new Date(),
                 serviceTypeId,
                 status: AppointmentStatus.CHECKED_IN,
-                notes: 'Walk-in / Check-in'
+                notes: 'Walk-in / Check-in',
+                // Auto-mark triajeCompleted for services that don't require triage
+                // Only CONSULTATION_NEW requires triage
+                triajeCompleted: serviceType.code !== ServiceTypeEnum.CONSULTATION_NEW
             });
 
             const prefix = serviceType.code ? serviceType.code.substring(0, 2) : 'X';

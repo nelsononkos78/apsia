@@ -4,6 +4,7 @@ import { Appointment } from '../models/appointment.model';
 import { Queue } from '../models/queue.model';
 import { getWebSocketService } from './websocket.service';
 import { getTvService } from './tv.service';
+import { Op } from 'sequelize';
 
 export class WaitingRoomService {
     /**
@@ -50,6 +51,9 @@ export class WaitingRoomService {
             // Broadcast TV state
             const tvService = getTvService();
             await tvService.broadcastTvState();
+
+            // Notify dashboard of changes
+            wsService.emitDashboardUpdate();
         } catch (error) {
             console.error('❌ WebSocket or TV Service error:', error);
         }
@@ -67,7 +71,9 @@ export class WaitingRoomService {
 
         return await WaitingRoom.findAll({
             where: {
-                status: WaitingRoomStatus.ESPERANDO
+                status: {
+                    [Op.in]: [WaitingRoomStatus.ESPERANDO, WaitingRoomStatus.LLAMADO]
+                }
             },
             include: [
                 {

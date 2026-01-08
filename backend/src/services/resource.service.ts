@@ -161,6 +161,9 @@ export class ResourceService {
             if (resourceWithAssociations) {
                 wsService.emitResourceUpdate(resourceWithAssociations.toJSON());
             }
+
+            // Notify dashboard of changes
+            wsService.emitDashboardUpdate();
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }
@@ -269,6 +272,9 @@ export class ResourceService {
             if (resourceWithAssociations) {
                 wsService.emitResourceUpdate(resourceWithAssociations.toJSON());
             }
+
+            // Notify dashboard of changes
+            wsService.emitDashboardUpdate();
         } catch (error) {
             console.error('❌ WebSocket not initialized:', error);
         }

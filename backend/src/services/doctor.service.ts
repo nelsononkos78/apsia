@@ -35,26 +35,23 @@ export class DoctorService {
         // Or just all checked in patients if no specific doctor assignment logic in waiting room yet
         // For now, let's assume we fetch patients waiting for this doctor's specialty or explicitly assigned
 
-        // Simple logic: Fetch all waiting patients for now, or filter by doctor if appointment has it
+        // Fetch waiting patients for this doctor
+        // Business rule: Only CONSULTATION_NEW requires triage
         const waitingList = await WaitingRoom.findAll({
             where: {
-                status: WaitingRoomStatus.ESPERANDO
+                status: {
+                    [Op.in]: [WaitingRoomStatus.ESPERANDO, WaitingRoomStatus.LLAMADO]
+                }
             },
             include: [
                 { model: Patient },
                 {
                     model: Appointment,
+                    as: 'appointment',
                     where: {
-                        [Op.and]: [
-                            {
-                                [Op.or]: [
-                                    { doctorId: doctor.id },
-                                    { doctorId: null }
-                                ]
-                            },
-                            {
-                                triajeCompleted: true
-                            }
+                        [Op.or]: [
+                            { doctorId: doctor.id },
+                            { doctorId: null }
                         ]
                     },
                     include: [{ model: ServiceType, as: 'serviceType' }],
@@ -62,6 +59,13 @@ export class DoctorService {
                 }
             ],
             order: [['priority', 'DESC'], ['checkInTime', 'ASC']]
+        });
+
+        // Filter in memory for service type logic
+        const filteredWaitingList = waitingList.filter(wr => {
+            const serviceCode = wr.appointment?.serviceType?.code;
+            // Show if: completed triage OR not CONSULTATION_NEW
+            return wr.appointment?.triajeCompleted || serviceCode !== 'CONSULTATION_NEW';
         });
 
         let currentAppointment = null;
@@ -96,13 +100,15 @@ export class DoctorService {
         });
 
         // Get count of patients pending triaje for this doctor
-        const pendingTriajeCount = await WaitingRoom.count({
+        // Only CONSULTATION_NEW requires triage
+        const allPendingTriaje = await WaitingRoom.findAll({
             where: {
                 status: WaitingRoomStatus.ESPERANDO
             },
             include: [
                 {
                     model: Appointment,
+                    as: 'appointment',
                     where: {
                         [Op.and]: [
                             {
@@ -116,15 +122,21 @@ export class DoctorService {
                             }
                         ]
                     },
+                    include: [{ model: ServiceType, as: 'serviceType' }],
                     required: true
                 }
             ]
         });
 
+        // Filter for CONSULTATION_NEW only
+        const pendingTriajeCount = allPendingTriaje.filter(
+            wr => wr.appointment?.serviceType?.code === 'CONSULTATION_NEW'
+        ).length;
+
         return {
             doctor,
             resource,
-            waitingList,
+            waitingList: filteredWaitingList,
             currentAppointment,
             attendedCount,
             pendingTriajeCount
@@ -137,7 +149,12 @@ export class DoctorService {
                 Patient,
                 {
                     model: Appointment,
-                    include: [Queue]
+                    as: 'appointment',
+                    include: [
+                        { model: Patient, as: 'patient' },
+                        { model: ServiceType, as: 'serviceType' },
+                        { model: Queue, as: 'queue' }
+                    ]
                 }
             ]
         });
@@ -224,6 +241,9 @@ export class DoctorService {
         }
         wsService.emitWaitingRoomUpdate(waitingRoomEntry.toJSON());
 
+        // Notify dashboard of changes
+        wsService.emitDashboardUpdate();
+
         return { success: true, message: 'Patient called' };
     }
 
@@ -284,6 +304,9 @@ export class DoctorService {
         }
 
         getWebSocketService().emitAppointmentUpdate(appointment.toJSON());
+
+        // Notify dashboard of changes
+        getWebSocketService().emitDashboardUpdate();
 
         return appointment;
     }

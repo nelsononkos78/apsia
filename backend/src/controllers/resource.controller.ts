@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { ResourceService } from '../services/resource.service';
 import { Resource, ResourceType, ResourceStatus, InhabilitadoReason } from '../models/resource.model';
 import { WaitingRoom, WaitingRoomStatus } from '../models/waiting-room.model';
-import { Appointment } from '../models/appointment.model';
+import { Appointment, ServiceTypeEnum } from '../models/appointment.model';
 import { Patient } from '../models/patient.model';
 import { Queue } from '../models/queue.model';
 import { ServiceType } from '../models/service-type.model';
@@ -200,40 +200,40 @@ export class ResourceController {
             //     return res.status(400).json({ message: 'No doctor assigned to this resource' });
             // }
 
-            // Find next patient based on resource type
-            let appointmentWhere: any = {};
 
-            if (resource.type === ResourceType.TRIAJE) {
-                // For Triaje: All patients who haven't completed triaje
-                // User requirement: "todos los pacientes del dia deben pasar por orden de llegada al triaje"
-                appointmentWhere = {
-                    triajeCompleted: false
-                };
-            } else {
-                // For other resources (Consultorio, Estancia, Tratamiento): 
-                // User requirement: "todos los pacientes del dia deben pasar por orden de llegada al triaje"
-                // Therefore, we strictly require triajeCompleted: true for ALL other resources.
-                appointmentWhere = {
-                    triajeCompleted: true
-                };
-
-                // Only filter by doctor if the resource has a doctor assigned
-                if (resource.doctorId) {
-                    appointmentWhere.doctorId = resource.doctorId;
-                }
-            }
 
             const nextPatient = await WaitingRoom.findOne({
                 where: {
                     status: WaitingRoomStatus.ESPERANDO,
+                    ...(resource.type !== ResourceType.TRIAJE ? {
+                        [Op.or]: [
+                            { '$appointment.triajeCompleted$': true },
+                            {
+                                '$appointment.serviceType.code$': {
+                                    [Op.ne]: ServiceTypeEnum.CONSULTATION_NEW
+                                }
+                            }
+                        ]
+                    } : {
+                        '$appointment.triajeCompleted$': false
+                    }),
+                    ...(resource.doctorId ? { '$appointment.doctorId$': resource.doctorId } : {})
                 },
                 include: [{
                     model: Appointment,
                     as: 'appointment',
-                    where: appointmentWhere,
+                    required: true,
                     include: [
                         { model: Queue, as: 'queue' },
-                        { model: ServiceType, as: 'serviceType' }
+                        {
+                            model: ServiceType,
+                            as: 'serviceType',
+                            required: true,
+                            // For TRIAJE: only CONSULTATION_NEW
+                            ...(resource.type === ResourceType.TRIAJE ? {
+                                where: { code: ServiceTypeEnum.CONSULTATION_NEW }
+                            } : {})
+                        }
                     ]
                 }, {
                     model: Patient,
@@ -339,6 +339,9 @@ export class ResourceController {
                 if (updatedWaitingRoom) {
                     wsService.emitWaitingRoomUpdate(updatedWaitingRoom.toJSON());
                 }
+
+                // Notify dashboard of changes
+                wsService.emitDashboardUpdate();
             } catch (emitError) {
                 console.error('Error emitting events:', emitError);
             }

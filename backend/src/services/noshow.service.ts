@@ -53,21 +53,10 @@ export class NoShowService {
     }
 
     /**
-     * Proceso diario (ej. 11 PM) para marcar como NO_SHOW las citas del día actual que no se confirmaron.
+     * Proceso diario (ej. 11 PM) para marcar como NO_SHOW las citas del día actual que no se completaron.
+     * Incluye: SCHEDULED, CHECKED_IN, IN_PROGRESS
      */
     static async processDailyNoShows() {
-        const now = new Date();
-        const startOfDay = new Date(now);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(now);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const pendingToday = await Appointment.findAll({
-            where: {
-                dateTime: { [Op.between]: [startOfDay, endOfDay] },
-                status: AppointmentStatus.SCHEDULED
-            }
-        });
         try {
             const now = new Date();
             const startOfDay = new Date(now);
@@ -75,10 +64,17 @@ export class NoShowService {
             const endOfDay = new Date(now);
             endOfDay.setHours(23, 59, 59, 999);
 
+            // Marcar como NO_SHOW todas las citas del día que no se completaron
             const pendingToday = await Appointment.findAll({
                 where: {
                     dateTime: { [Op.between]: [startOfDay, endOfDay] },
-                    status: AppointmentStatus.SCHEDULED
+                    status: {
+                        [Op.in]: [
+                            AppointmentStatus.SCHEDULED,
+                            AppointmentStatus.CHECKED_IN,
+                            AppointmentStatus.IN_PROGRESS
+                        ]
+                    }
                 }
             });
 
@@ -90,6 +86,21 @@ export class NoShowService {
             for (const appointment of pendingToday) {
                 appointment.status = AppointmentStatus.NO_SHOW;
                 await appointment.save();
+
+                // Actualizar Sala de Espera si existe registro
+                await WaitingRoom.update(
+                    { status: WaitingRoomStatus.NO_SHOW },
+                    { where: { appointmentId: appointment.id } }
+                );
+
+                // Actualizar Cola
+                await Queue.update(
+                    { isCompleted: true, isCurrent: false },
+                    { where: { appointmentId: appointment.id } }
+                );
+
+                // Liberar recurso si está asignado
+                await this.releaseResourceIfAssigned(appointment.id);
             }
 
             console.log(`[NoShowService] Proceso diario completado: ${pendingToday.length} citas marcadas como NO_SHOW.`);
@@ -99,7 +110,7 @@ export class NoShowService {
             return pendingToday.length;
         } catch (error) {
             console.error('[NoShowService] Error en proceso diario:', error);
-            return 0; // Or rethrow, depending on desired error handling
+            return 0;
         }
     }
 

@@ -16,6 +16,10 @@ export class DashboardController {
             const startDate = new Date(targetYear, targetMonth - 1, 1);
             const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
 
+            // 0. Limpieza reactiva de citas antiguas antes de calcular estadísticas
+            const { NoShowService } = require('../services/noshow.service');
+            await NoShowService.cleanupOldAppointments();
+
             // 1. Citas Atendidas de Pacientes Nuevos (registrados en el periodo)
             const newPatients = await Appointment.count({
                 where: {
@@ -57,22 +61,32 @@ export class DashboardController {
             // 4. Total Citas (Suma de Atendidos + No Show/Canceladas) para que cuadre
             const totalAppointments = newPatients + continuingPatients + noShows;
 
-            // 5. Pendientes (No se suman al total)
-            const pendingAppointments = await Appointment.count({
+            // 5. Pendientes (Separados por estado para mayor claridad)
+            // Por Llegar: Solo SCHEDULED
+            const scheduledAppointments = await Appointment.count({
                 where: {
                     dateTime: { [Op.between]: [startDate, endDate] },
-                    status: { [Op.in]: [AppointmentStatus.SCHEDULED, AppointmentStatus.CHECKED_IN, AppointmentStatus.IN_PROGRESS] }
+                    status: AppointmentStatus.SCHEDULED
                 }
             });
 
-            // 6. Ingresos Totales (Cotizaciones aprobadas)
-            const incomeResult = await Quote.sum('totalAmount', {
+            // En Espera: Solo CHECKED_IN
+            const waitingAppointments = await Appointment.count({
                 where: {
-                    status: QuoteStatus.APPROVED,
-                    createdAt: { [Op.between]: [startDate, endDate] }
+                    dateTime: { [Op.between]: [startDate, endDate] },
+                    status: AppointmentStatus.CHECKED_IN
                 }
             });
-            const totalIncome = incomeResult || 0;
+
+            // En Atención: Solo IN_PROGRESS
+            const inConsultationAppointments = await Appointment.count({
+                where: {
+                    dateTime: { [Op.between]: [startDate, endDate] },
+                    status: AppointmentStatus.IN_PROGRESS
+                }
+            });
+
+
 
             // 7. Top 5 Diagnósticos (CIE10)
             // ... (rest of the logic remains same but we need to return pendingAppointments)
@@ -115,8 +129,9 @@ export class DashboardController {
                     continuingPatients,
                     totalAppointments,
                     noShows,
-                    pendingAppointments,
-                    totalIncome
+                    scheduledAppointments,
+                    waitingAppointments,
+                    inConsultationAppointments,
                 },
                 topDiagnostics,
                 serviceDistribution

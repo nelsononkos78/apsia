@@ -1,21 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import api from '../services/api';
 import GlobalHeader from '../components/common/GlobalHeader.vue';
 import { websocketService } from '../services/websocket.service';
-import { Bar, Doughnut } from 'vue-chartjs';
 import {
   Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
   Title,
   Tooltip,
   Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale,
   ArcElement
 } from 'chart.js';
+import { Bar, Doughnut } from 'vue-chartjs';
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const stats = ref<any>(null);
 const loading = ref(true);
@@ -37,37 +45,32 @@ const months = [
   { value: 12, label: 'Diciembre' }
 ];
 
-const years = [2024, 2025, 2026];
+const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-async function loadStats() {
+async function fetchStats() {
   loading.value = true;
   try {
-    const res = await api.get(`/dashboard/stats?month=${selectedMonth.value}&year=${selectedYear.value}`);
+    const res = await api.get('/dashboard/stats', {
+      params: {
+        month: selectedMonth.value,
+        year: selectedYear.value
+      }
+    });
     stats.value = res.data;
   } catch (error) {
-    console.error('Error loading stats:', error);
+    console.error('Error fetching stats:', error);
   } finally {
     loading.value = false;
   }
 }
 
-watch([selectedMonth, selectedYear], loadStats);
-
 onMounted(() => {
-  loadStats();
-  
-  // Join dashboard room for real-time updates
-  websocketService.emit('join:dashboard');
-  
-  websocketService.on('dashboard:updated', () => {
-    console.log('🔄 Dashboard update received via WebSocket');
-    loadStats();
-  });
+  fetchStats();
+  websocketService.on('dashboard:updated', fetchStats);
 });
 
 onUnmounted(() => {
-  websocketService.emit('leave:dashboard');
-  websocketService.off('dashboard:updated');
+  websocketService.off('dashboard:updated', fetchStats);
 });
 
 const patientChartData = computed(() => {
@@ -92,8 +95,15 @@ const serviceChartData = computed(() => {
   return {
     labels: stats.value.serviceDistribution.map((s: any) => s.name),
     datasets: [{
-      data: stats.value.serviceDistribution.map((s: any) => parseInt(s.count)),
-      backgroundColor: ['#5371C4', '#CEEAC7', '#C3E1ED', '#223675', '#A5D8A9', '#FAD02E', '#F28D35']
+      data: stats.value.serviceDistribution.map((s: any) => s.count),
+      backgroundColor: [
+        '#223675',
+        '#5371C4',
+        '#CEEAC7',
+        '#A5D8A9',
+        '#FDE68A',
+        '#F87171'
+      ]
     }]
   };
 });
@@ -108,9 +118,6 @@ const chartOptions = {
   }
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value);
-}
 </script>
 
 <template>
@@ -122,10 +129,10 @@ function formatCurrency(value: number) {
         <h1 class="text-3xl font-bold text-primary">Dashboard Administrativo</h1>
         
         <div class="flex gap-4 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-          <select v-model="selectedMonth" class="bg-transparent border-none focus:ring-0 font-semibold text-gray-600">
+          <select v-model="selectedMonth" @change="fetchStats" class="bg-transparent border-none focus:ring-0 font-semibold text-gray-600">
             <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
-          <select v-model="selectedYear" class="bg-transparent border-none focus:ring-0 font-semibold text-gray-600">
+          <select v-model="selectedYear" @change="fetchStats" class="bg-transparent border-none focus:ring-0 font-semibold text-gray-600">
             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
           </select>
         </div>
@@ -137,14 +144,14 @@ function formatCurrency(value: number) {
 
       <template v-else-if="stats">
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
           <div class="card-kpi">
             <div class="icon-box bg-blue-50 text-blue-500">
               <i class="fas fa-user-plus"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">Nuevos</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ stats.kpis.newPatients }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">Nuevos</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.newPatients }}</p>
             </div>
           </div>
 
@@ -153,8 +160,8 @@ function formatCurrency(value: number) {
               <i class="fas fa-user-check"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">Seguimientos</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ stats.kpis.continuingPatients }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">Seguimientos</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.continuingPatients }}</p>
             </div>
           </div>
 
@@ -163,8 +170,8 @@ function formatCurrency(value: number) {
               <i class="fas fa-user-times"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">No Show</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ stats.kpis.noShows }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">No Show</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.noShows }}</p>
             </div>
           </div>
 
@@ -173,28 +180,38 @@ function formatCurrency(value: number) {
               <i class="fas fa-calendar-check"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">Total Citas</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ stats.kpis.totalAppointments }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">Total Citas</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.totalAppointments }}</p>
             </div>
           </div>
 
           <div class="card-kpi">
             <div class="icon-box bg-orange-50 text-orange-500">
-              <i class="fas fa-hourglass-half"></i>
+              <i class="fas fa-calendar-alt"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">Pendientes</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ stats.kpis.pendingAppointments }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">Por Llegar</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.scheduledAppointments }}</p>
             </div>
           </div>
 
           <div class="card-kpi">
-            <div class="icon-box bg-yellow-50 text-yellow-600">
-              <i class="fas fa-hand-holding-usd"></i>
+            <div class="icon-box bg-indigo-50 text-indigo-500">
+              <i class="fas fa-clock"></i>
             </div>
             <div class="kpi-content">
-              <h3 class="text-gray-500 text-sm font-medium">Ingresos</h3>
-              <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(stats.kpis.totalIncome) }}</p>
+              <h3 class="text-gray-500 text-xs font-medium">En Espera</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.waitingAppointments }}</p>
+            </div>
+          </div>
+
+          <div class="card-kpi">
+            <div class="icon-box bg-teal-50 text-teal-500">
+              <i class="fas fa-user-md"></i>
+            </div>
+            <div class="kpi-content">
+              <h3 class="text-gray-500 text-xs font-medium">En Atención</h3>
+              <p class="text-xl font-bold text-gray-800">{{ stats.kpis.inConsultationAppointments }}</p>
             </div>
           </div>
         </div>
@@ -222,11 +239,11 @@ function formatCurrency(value: number) {
 
 <style scoped>
 .card-kpi {
-  @apply bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 transition-transform hover:scale-105;
+  @apply bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 transition-transform hover:scale-105;
 }
 
 .icon-box {
-  @apply w-12 h-12 rounded-xl flex items-center justify-center text-xl;
+  @apply w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0;
 }
 
 .card-chart {
