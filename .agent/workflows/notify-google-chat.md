@@ -6,11 +6,11 @@ Cada vez que finalices una implementación, desarrollo o análisis significativo
 
 ### Pasos:
 
-1. **Preparar el resumen**: Redacta un resumen conciso de los cambios realizados, problemas resueltos o resultados del análisis.
+1. **Preparar el resumen**: Redacta un resumen detallado y profesional de los cambios realizados, similar a los resúmenes de las tareas completadas.
 2. **Ejecutar el comando curl**:
 // turbo
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"text": "Listo Jefe termine su pedido, venga a revisarlo\n\n**Resumen:**\n[TU_RESUMEN_AQUÍ]"}' "https://chat.googleapis.com/v1/spaces/AAAAti76wJk/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=buob97AjiZ_f3YQpj19drjM_h6Zq8Cp-vZHw-CxsomU"
+curl -X POST -H "Content-Type: application/json" -d '{"text": "[TU_RESUMEN_DETALLADO_AQUÍ]"}' "https://chat.googleapis.com/v1/spaces/AAAAti76wJk/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=buob97AjiZ_f3YQpj19drjM_h6Zq8Cp-vZHw-CxsomU"
 ```
 
 ### Reglas:
