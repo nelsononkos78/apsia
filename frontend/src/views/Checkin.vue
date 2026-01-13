@@ -497,6 +497,7 @@ const selectAppointment = (app: any) => {
 
 onMounted(() => {
   fetchTodayAppointments();
+  websocketService.joinMonitoring();
   
   // Listen for new appointments via WebSocket
   websocketService.on('appointment:updated', (appointment: any) => {
@@ -578,7 +579,9 @@ onUnmounted(() => {
           </div>
           <div class="flex items-center gap-4">
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </span>
               <input 
                 v-model="searchQuery"
                 type="text" 
@@ -587,7 +590,7 @@ onUnmounted(() => {
               />
             </div>
             <button @click="fetchTodayAppointments" class="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-all font-medium text-gray-700">
-              <span :class="{ 'animate-spin': loading }">🔄</span>
+              <i class="fa-solid fa-rotate" :class="{ 'animate-spin': loading }"></i>
               Actualizar
             </button>
           </div>
@@ -599,7 +602,9 @@ onUnmounted(() => {
         </div>
 
         <div v-else-if="todayAppointments.length === 0" class="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-200 shadow-inner">
-          <div class="text-6xl mb-4">📅</div>
+          <div class="text-6xl mb-4">
+            <i class="fa-solid fa-calendar-days text-gray-200"></i>
+          </div>
           <p class="text-xl text-gray-400 font-medium">No hay citas programadas para hoy.</p>
           <p class="text-gray-400 text-sm mt-1">Si crees que esto es un error, por favor consulta en recepción.</p>
         </div>
@@ -625,11 +630,11 @@ onUnmounted(() => {
                 >
                   <td class="px-3 py-3 whitespace-nowrap">
                     <div v-if="app.status === 'CHECKED_IN' && app.checkinTime" class="flex items-center gap-1 text-primary font-bold text-sm">
-                      <span>🕒</span>
+                      <i class="fa-solid fa-clock"></i>
                       {{ new Date(app.checkinTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                     </div>
                     <div v-else-if="app.status === 'SCHEDULED'" class="flex items-center gap-1 text-gray-400 text-sm">
-                      <span>📅</span>
+                      <i class="fa-solid fa-calendar-days"></i>
                       <span class="text-xs italic">Pendiente</span>
                     </div>
                   </td>
@@ -645,7 +650,7 @@ onUnmounted(() => {
                   </td>
                   <td class="px-3 py-3 whitespace-nowrap">
                     <div class="flex items-center gap-2">
-                      <span class="text-base">{{ app.serviceType?.icon || '🏥' }}</span>
+                      <span class="text-base" v-html="app.serviceType?.icon || '<i class=\'fa-solid fa-hospital\'></i>'"></span>
                       <span class="text-sm font-semibold text-gray-700">{{ app.serviceType?.name }}</span>
                     </div>
                   </td>
@@ -658,7 +663,8 @@ onUnmounted(() => {
                       @click="selectAppointment(app)"
                       class="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg font-bold transition-all text-xs whitespace-nowrap"
                     >
-                      Check-in →
+                      Check-in
+                      <i class="fa-solid fa-arrow-right ml-1"></i>
                     </button>
                     <div v-else-if="app.status === 'CHECKED_IN'" class="inline-block px-3 py-1.5 bg-orange-100 text-orange-600 rounded-lg font-bold text-xs">
                       Checked in
@@ -678,18 +684,20 @@ onUnmounted(() => {
     </div>
 
     <!-- Main Content: Scanning (Step 2) -->
-    <div v-if="!showTable && !showSuccess && !showVerification" class="flex-1 flex items-center justify-center p-8 bg-white">
+    <div v-else-if="!showTable && !showSuccess && !showVerification" class="flex-1 flex items-center justify-center p-8 bg-white">
       <div class="max-w-2xl w-full text-center space-y-12 animate-fade-in">
         <div class="flex justify-start">
           <button @click="showTable = true" class="group flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-primary transition-colors font-medium">
-            <span class="group-hover:-translate-x-1 transition-transform">←</span>
+            <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
             Volver a la lista de citas
           </button>
         </div>
         <!-- Title -->
         <div>
           <div class="inline-block p-4 bg-primary/10 rounded-3xl mb-6">
-            <span class="text-4xl">🆔</span>
+            <span class="text-4xl">
+              <i class="fa-solid fa-id-card text-primary"></i>
+            </span>
           </div>
           <h1 class="text-5xl font-bold text-onkos-dark-blue mb-4">Confirmar Identidad</h1>
           <p class="text-xl text-onkos-medium-blue">Hola <strong>{{ selectedAppointment?.contactName }}</strong>, por favor escanea tu documento para confirmar tu llegada.</p>
@@ -736,7 +744,7 @@ onUnmounted(() => {
             <!-- Hover overlay text -->
             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               <div class="bg-primary text-white px-6 py-3 rounded-full font-semibold text-lg shadow-xl">
-                📸 Escanear
+                <i class="fa-solid fa-camera mr-2"></i> Escanear
               </div>
             </div>
           </button>
@@ -750,7 +758,7 @@ onUnmounted(() => {
           
           <div class="relative">
             <div class="absolute left-5 top-1/2 -translate-y-1/2 text-primary text-2xl">
-              🔢
+              <i class="fa-solid fa-hashtag"></i>
             </div>
             <input 
               type="text" 
@@ -768,7 +776,7 @@ onUnmounted(() => {
             class="w-full bg-primary text-white py-5 text-xl font-semibold rounded-2xl hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
             <span v-if="loading">Verificando...</span>
-            <span v-else>Continuar ✓</span>
+            <span v-else>Continuar <i class="fa-solid fa-check ml-1"></i></span>
           </button>
           
 
@@ -776,10 +784,7 @@ onUnmounted(() => {
           <!-- Processing indicator -->
           <div v-if="processingImage" class="text-center">
             <div class="flex items-center justify-center gap-3 text-primary">
-              <svg class="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <i class="fa-solid fa-circle-notch animate-spin text-3xl"></i>
               <span class="text-lg font-semibold">Analizando imagen con IA...</span>
             </div>
           </div>
@@ -845,7 +850,9 @@ onUnmounted(() => {
 
             <!-- Warning if address is missing -->
             <div v-if="!extractedData.address" class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-              <span class="text-2xl">ℹ️</span>
+              <span class="text-2xl">
+                <i class="fa-solid fa-circle-info text-blue-500"></i>
+              </span>
               <div class="flex-1">
                 <p class="text-sm font-medium text-blue-900">Dirección no detectada</p>
                 <p class="text-xs text-blue-700 mt-1">La dirección puede estar en el reverso del documento. Puedes escanear el reverso o continuar sin ella.</p>
@@ -859,13 +866,13 @@ onUnmounted(() => {
               @click="smartScan(true)"  
               class="flex-1 bg-blue-500 text-white py-4 text-lg font-semibold rounded-2xl hover:bg-blue-600 transition-all shadow-lg"
             >
-              📸 Escanear Reverso
+              <i class="fa-solid fa-camera mr-2"></i> Escanear Reverso
             </button>
             <button 
               @click="confirmAndCheckin" 
               class="flex-1 bg-primary text-white py-4 text-lg font-semibold rounded-2xl hover:bg-opacity-90 transition-all shadow-lg"
             >
-              ✓ Confirmar y Continuar
+              <i class="fa-solid fa-check mr-2"></i> Confirmar y Continuar
             </button>
           </div>
         </div>
@@ -878,9 +885,7 @@ onUnmounted(() => {
         <!-- Success Icon -->
         <div class="flex justify-center">
           <div class="w-32 h-32 bg-green-100 rounded-full flex items-center justify-center">
-            <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-            </svg>
+            <i class="fa-solid fa-check text-6xl text-green-500"></i>
           </div>
         </div>
 
@@ -911,7 +916,9 @@ onUnmounted(() => {
       <!-- Camera Header -->
       <div class="p-6 bg-gray-900/90 backdrop-blur flex items-center justify-between">
         <h2 class="text-white text-xl font-semibold">Escanear DNI con IA</h2>
-        <button @click="stopCamera" class="text-white hover:text-gray-300 text-3xl">×</button>
+        <button @click="stopCamera" class="text-white hover:text-gray-300 text-3xl">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <!-- Camera View -->
@@ -944,14 +951,11 @@ onUnmounted(() => {
           class="w-full bg-primary text-white py-5 text-xl font-bold rounded-2xl hover:bg-opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
         >
           <span v-if="processingImage" class="flex items-center gap-2">
-            <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <i class="fa-solid fa-circle-notch animate-spin text-xl"></i>
             Analizando con IA...
           </span>
           <span v-else class="flex items-center gap-2">
-            <span class="text-2xl">🤖</span>
+            <i class="fa-solid fa-robot text-2xl"></i>
             Capturar y Analizar
           </span>
         </button>
@@ -961,7 +965,7 @@ onUnmounted(() => {
           :disabled="processingImage"
           class="w-full mt-4 bg-gray-800 text-white py-4 text-lg font-semibold rounded-2xl hover:bg-gray-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 border border-gray-700"
         >
-          <span>📂</span> Subir desde archivo
+          <i class="fa-solid fa-folder-open mr-2"></i> Subir desde archivo
         </button>
       </div>
 
@@ -982,7 +986,7 @@ onUnmounted(() => {
     <div v-if="showUploadFallback" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
       <div class="bg-white rounded-3xl max-w-md w-full p-8 text-center shadow-2xl">
         <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <span class="text-4xl">📷</span>
+          <i class="fa-solid fa-camera-retro text-4xl text-orange-500"></i>
         </div>
         
         <h3 class="text-2xl font-bold text-gray-900 mb-3">Cámara no detectada</h3>
@@ -995,7 +999,7 @@ onUnmounted(() => {
             @click="openFileSelector(); showUploadFallback = false"
             class="w-full bg-primary text-white py-4 text-lg font-semibold rounded-2xl hover:bg-opacity-90 transition-all shadow-lg flex items-center justify-center gap-2"
           >
-            <span>📂</span> Seleccionar Foto
+            <i class="fa-solid fa-folder-open mr-2"></i> Seleccionar Foto
           </button>
           
           <button 

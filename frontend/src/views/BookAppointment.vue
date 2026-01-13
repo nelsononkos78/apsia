@@ -332,7 +332,7 @@ loadDoctors();
             :class="['p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md',
                      formData.serviceTypeId === type.id ? 'border-primary bg-primary/5 shadow-inner' : 'border-gray-100 bg-white']"
           >
-            <div class="text-3xl mb-2">{{ type.icon }}</div>
+            <div class="text-3xl mb-2" v-html="type.icon"></div>
             <h4 class="font-bold text-onkos-dark-blue">{{ type.name }}</h4>
             <p class="text-xs text-gray-500 mt-1">{{ type.description }}</p>
           </div>
@@ -436,7 +436,9 @@ loadDoctors();
             <h3 class="font-bold mb-4 text-lg">Estado de Disponibilidad</h3>
             
             <div v-if="!formData.date" class="text-center text-gray-400 py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-              <div class="text-4xl mb-2">📅</div>
+              <div class="text-4xl mb-2">
+                <i class="fa-solid fa-calendar-days"></i>
+              </div>
               <p>Seleccione una fecha en el calendario para verificar cupos disponibles</p>
             </div>
             
@@ -450,7 +452,10 @@ loadDoctors();
                  :class="['p-8 rounded-2xl border-2 text-center transition-all shadow-sm',
                           availability.available ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900']"
                >
-                 <div class="text-5xl mb-4">{{ availability.available ? '✅' : '❌' }}</div>
+                 <div class="text-5xl mb-4">
+                   <i v-if="availability.available" class="fa-solid fa-circle-check text-green-500"></i>
+                   <i v-else class="fa-solid fa-circle-xmark text-red-500"></i>
+                 </div>
                  <h4 class="text-2xl font-black mb-2">{{ availability.available ? '¡Cupos Disponibles!' : 'Sin Disponibilidad' }}</h4>
                  <p class="text-lg font-medium opacity-90">{{ availability.message }}</p>
                  
@@ -461,7 +466,9 @@ loadDoctors();
 
                <div v-if="availability.available" class="bg-blue-50 p-5 rounded-xl border border-blue-100 text-blue-900 shadow-sm">
                  <div class="flex gap-3">
-                   <span class="text-xl">ℹ️</span>
+                   <span class="text-xl">
+                     <i class="fa-solid fa-circle-info text-blue-500"></i>
+                   </span>
                    <div>
                      <p class="font-bold mb-1 text-sm">Información de Atención</p>
                      <p class="text-xs leading-relaxed">Para este servicio no se asignan horarios fijos. Una vez confirmada su cita, puede acercarse al centro médico en el horario de atención del servicio seleccionado.</p>
@@ -474,7 +481,7 @@ loadDoctors();
 
         <div class="flex justify-between mt-8">
           <button @click="goBack" class="btn-secondary px-6 py-3 flex items-center gap-2">
-            <span>←</span>
+            <i class="fa-solid fa-arrow-left"></i>
             Atrás
           </button>
           <button 
@@ -483,7 +490,7 @@ loadDoctors();
             class="btn-primary px-8 py-3 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
-            <span>→</span>
+            <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
       </div>
@@ -499,7 +506,9 @@ loadDoctors();
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="flex gap-3">
-              <div class="text-primary text-2xl">📅</div>
+              <div class="text-primary text-2xl">
+                <i class="fa-solid fa-calendar-days"></i>
+              </div>
               <div>
                 <p class="text-sm text-gray-500">Fecha</p>
                 <p class="font-bold">{{ formData.date }}</p>
@@ -507,7 +516,8 @@ loadDoctors();
             </div>
 
             <div class="flex gap-3">
-              <div class="text-primary text-2xl">🏥</div>
+              <div class="text-primary text-2xl" v-html="serviceTypes.find(s => s.id === formData.serviceTypeId)?.icon">
+              </div>
               <div>
                 <p class="text-sm text-gray-500">Tipo de Servicio</p>
                 <p class="font-bold">{{ serviceTypes.find(s => s.id === formData.serviceTypeId)?.name }}</p>
@@ -515,7 +525,9 @@ loadDoctors();
             </div>
 
             <div class="flex gap-3">
-              <div class="text-primary text-2xl">🔬</div>
+              <div class="text-primary text-2xl">
+                <i class="fa-solid fa-clipboard-user"></i>
+              </div>
               <div>
                 <p class="text-sm text-gray-500">Especialidad</p>
                 <p class="font-bold">{{ formData.specialty }}</p>
@@ -523,7 +535,9 @@ loadDoctors();
             </div>
 
             <div class="flex gap-3">
-              <div class="text-primary text-2xl">👨‍⚕️</div>
+              <div class="text-primary text-2xl">
+                <i class="fa-solid fa-user-doctor"></i>
+              </div>
               <div>
                 <p class="text-sm text-gray-500">Médico</p>
                 <p class="font-bold">{{ doctors.find(d => d.id === formData.doctorId)?.name || 'Cualquier médico disponible' }}</p>
@@ -532,7 +546,9 @@ loadDoctors();
           </div>
 
           <div v-if="formData.notes" class="mt-6 flex gap-3">
-            <div class="text-primary text-2xl">📝</div>
+            <div class="text-primary text-2xl">
+              <i class="fa-solid fa-note-sticky"></i>
+            </div>
             <div>
               <p class="text-sm text-gray-500">Motivo de la Consulta</p>
               <p class="text-gray-700">{{ formData.notes }}</p>
@@ -548,7 +564,9 @@ loadDoctors();
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Nombre de Contacto</label>
             <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">👤</span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa-solid fa-user"></i>
+              </span>
               <input 
                 type="text" 
                 v-model="formData.contactName"
@@ -562,7 +580,9 @@ loadDoctors();
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono de Contacto</label>
             <div class="relative">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📞</span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa-solid fa-phone"></i>
+              </span>
               <input 
                 type="tel" 
                 v-model="formData.phoneNumber"
@@ -576,7 +596,7 @@ loadDoctors();
 
         <div class="flex justify-between">
           <button @click="goBack" class="btn-secondary px-6 py-3 flex items-center gap-2">
-            <span>←</span>
+            <i class="fa-solid fa-arrow-left"></i>
             Atrás
           </button>
           <button 

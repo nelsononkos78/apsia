@@ -33,12 +33,16 @@ export class ResourceController {
     async getResourcesByType(req: Request, res: Response) {
         try {
             const { type } = req.params;
+            const { staffId } = req.query;
 
             if (!Object.values(ResourceType).includes(type as ResourceType)) {
                 return res.status(400).json({ error: 'Tipo de recurso inválido' });
             }
 
-            const resources = await resourceService.getResourcesByType(type as ResourceType);
+            const resources = await resourceService.getResourcesByType(
+                type as ResourceType,
+                staffId ? parseInt(staffId as string) : undefined
+            );
             res.json(resources);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
@@ -70,7 +74,7 @@ export class ResourceController {
      */
     async createResource(req: Request, res: Response) {
         try {
-            const { name, type, capacity, notes } = req.body;
+            const { name, type, capacity, notes, doctorId, staffId } = req.body;
 
             if (!name || !type) {
                 return res.status(400).json({ error: 'Nombre y tipo son requeridos' });
@@ -84,7 +88,9 @@ export class ResourceController {
                 name,
                 type,
                 capacity,
-                notes
+                notes,
+                doctorId,
+                staffId
             });
 
             res.status(201).json(resource);
@@ -205,7 +211,9 @@ export class ResourceController {
             const nextPatient = await WaitingRoom.findOne({
                 where: {
                     status: WaitingRoomStatus.ESPERANDO,
-                    ...(resource.type !== ResourceType.TRIAJE ? {
+                    ...(resource.type === ResourceType.TRIAJE ? {
+                        '$appointment.triajeCompleted$': false
+                    } : {
                         [Op.or]: [
                             { '$appointment.triajeCompleted$': true },
                             {
@@ -214,10 +222,9 @@ export class ResourceController {
                                 }
                             }
                         ]
-                    } : {
-                        '$appointment.triajeCompleted$': false
                     }),
-                    ...(resource.doctorId ? { '$appointment.doctorId$': resource.doctorId } : {})
+                    // Strictly filter by doctorId ONLY for CONSULTORIO
+                    ...(resource.type === ResourceType.CONSULTORIO && resource.doctorId ? { '$appointment.doctorId$': resource.doctorId } : {})
                 },
                 include: [{
                     model: Appointment,
@@ -366,12 +373,16 @@ export class ResourceController {
     async getAvailableResources(req: Request, res: Response) {
         try {
             const { type } = req.params;
+            const { staffId } = req.query;
 
-            if (!Object.values(ResourceType).includes(type as ResourceType)) {
-                return res.status(400).json({ error: 'Tipo de recurso inválido' });
+            if (!type) {
+                return res.status(400).json({ error: 'Tipo es requerido' });
             }
 
-            const resources = await resourceService.getAvailableResourcesByType(type as ResourceType);
+            const resources = await resourceService.getAvailableResourcesByType(
+                type as ResourceType,
+                staffId ? parseInt(staffId as string) : undefined
+            );
             res.json(resources);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

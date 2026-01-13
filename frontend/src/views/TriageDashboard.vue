@@ -287,11 +287,15 @@ onMounted(() => {
     websocketService.joinMonitoring();
     websocketService.on('resource:updated', loadDashboard);
     websocketService.on('waitingRoom:updated', loadDashboard);
+    websocketService.on('waitingRoom:added', loadDashboard);
+    websocketService.on('waitingRoom:removed', loadDashboard);
 });
 
 onUnmounted(() => {
     websocketService.off('resource:updated', loadDashboard);
     websocketService.off('waitingRoom:updated', loadDashboard);
+    websocketService.off('waitingRoom:added', loadDashboard);
+    websocketService.off('waitingRoom:removed', loadDashboard);
 });
 </script>
 

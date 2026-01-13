@@ -110,6 +110,12 @@ class WebSocketService {
         }
     }
 
+    public joinDashboard() {
+        if (this.socket?.connected) {
+            this.socket.emit('join:dashboard');
+        }
+    }
+
     /**
      * Subscribe to an event
      */

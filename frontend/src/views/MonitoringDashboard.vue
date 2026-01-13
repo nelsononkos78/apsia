@@ -151,6 +151,7 @@ async function handleDateSelected(date: Date) {
 
 onMounted(async () => {
     await loadData();
+    websocketService.joinMonitoring();
     
     isConnected.value = websocketService.isConnected();
     

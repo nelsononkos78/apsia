@@ -66,6 +66,7 @@ async function fetchStats() {
 
 onMounted(() => {
   fetchStats();
+  websocketService.joinDashboard();
   websocketService.on('dashboard:updated', fetchStats);
 });
 

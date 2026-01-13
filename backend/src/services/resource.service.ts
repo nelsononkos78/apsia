@@ -4,6 +4,7 @@ import { Doctor } from '../models/doctor.model';
 import { DoctorSchedule } from '../models/doctor-schedule.model';
 import { Appointment, AppointmentStatus } from '../models/appointment.model';
 import { WaitingRoom, WaitingRoomStatus } from '../models/waiting-room.model';
+import { Staff } from '../models/staff.model';
 import { Op } from 'sequelize';
 import { getWebSocketService } from './websocket.service';
 
@@ -29,9 +30,14 @@ export class ResourceService {
     /**
      * Obtener recursos por tipo
      */
-    async getResourcesByType(type: ResourceType): Promise<Resource[]> {
+    async getResourcesByType(type: ResourceType, staffId?: number): Promise<Resource[]> {
+        const where: any = { type };
+        if (staffId) {
+            where.staffId = staffId;
+        }
+
         return await Resource.findAll({
-            where: { type },
+            where,
             include: [
                 { model: Patient, as: 'currentPatient' },
                 { model: Appointment, as: 'currentAppointment' },
@@ -39,7 +45,8 @@ export class ResourceService {
                     model: Doctor,
                     as: 'doctor',
                     include: [{ model: DoctorSchedule, as: 'schedules' }]
-                }
+                },
+                { model: Staff, as: 'staff' }
             ],
             order: [['name', 'ASC']]
         });
@@ -70,15 +77,28 @@ export class ResourceService {
         type: ResourceType;
         capacity?: number;
         notes?: string;
+        doctorId?: number;
+        staffId?: number;
     }): Promise<Resource> {
-        const newResource = await Resource.create({
+        const resourceData: any = {
             name: data.name,
             type: data.type,
             capacity: data.capacity || 1,
             notes: data.notes,
             status: ResourceStatus.DISPONIBLE,
             currentOccupancy: 0
-        });
+        };
+
+        // Apply business rules for assignments
+        if (data.type === ResourceType.CONSULTORIO) {
+            resourceData.doctorId = data.doctorId || null;
+            resourceData.staffId = null; // Consulting rooms don't have staffId
+        } else {
+            resourceData.doctorId = null; // Other resources don't have doctorId
+            resourceData.staffId = data.staffId || null;
+        }
+
+        const newResource = await Resource.create(resourceData);
 
         // Emit WebSocket event
         try {
@@ -285,15 +305,21 @@ export class ResourceService {
     /**
      * Obtener recursos disponibles por tipo
      */
-    async getAvailableResourcesByType(type: ResourceType): Promise<Resource[]> {
+    async getAvailableResourcesByType(type: ResourceType, staffId?: number): Promise<Resource[]> {
+        const where: any = {
+            type,
+            status: ResourceStatus.DISPONIBLE,
+            currentOccupancy: {
+                [Op.lt]: Resource.sequelize!.col('capacity')
+            }
+        };
+
+        if (staffId) {
+            where.staffId = staffId;
+        }
+
         return await Resource.findAll({
-            where: {
-                type,
-                status: ResourceStatus.DISPONIBLE,
-                currentOccupancy: {
-                    [Op.lt]: Resource.sequelize!.col('capacity')
-                }
-            },
+            where,
             order: [['name', 'ASC']]
         });
     }
